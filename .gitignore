@@ -51,6 +51,7 @@ data/
 !name_classifier/models/.gitkeep
 *.h5
 *.joblib
+*.gz
 
 # Jupyter
 .ipynb_checkpoints/
