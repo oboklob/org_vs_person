@@ -1,0 +1,11 @@
+{
+  "training_date": "2025-12-11T12:42:43.805116",
+  "vectorizer": "tfidf_char_3-5",
+  "classifier": "MultinomialNB",
+  "test_accuracy": 0.838,
+  "test_f1": 0.813271699368141,
+  "cv_accuracy_mean": 0.8177503521307613,
+  "cv_accuracy_std": 0.0038077186236210345,
+  "training_samples": 4000,
+  "test_samples": 1000
+}

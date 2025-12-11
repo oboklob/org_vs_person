@@ -1,0 +1,24 @@
+wikidata_id	eng	label	language	type
+Q1	Bill Gates	Bill Gates	en	PER
+Q1	Bill Gates	빌 게이츠	ko	PER
+Q2	Microsoft	Microsoft	en	ORG
+Q2	Microsoft	Microsoft Corporation	en	ORG
+Q2	Microsoft	マイクロソフト	ja	ORG
+Q3	Steve Jobs	Steve Jobs	en	PER
+Q4	Apple	Apple Inc	en	ORG
+Q5	London	London	en	LOC
+Q6	John Smith	John Smith	en	PER
+Q7	Jane Doe	Jane Doe	en	PER
+Q8	Google	Google	en	ORG
+Q9	IBM	IBM	en	ORG
+Q10	Amazon	Amazon	en	ORG
+Q11	Mark Zuckerberg	Mark Zuckerberg	en	PER
+Q12	Facebook	Facebook	en	ORG
+Q13	Paris	Paris	en	LOC
+Q14	New York	New York	en	LOC
+Q15	Elon Musk	Elon Musk	en	PER
+Q16	Tesla	Tesla	en	ORG
+Q17	Jeff Bezos	Jeff Bezos	en	PER
+Q18	Tim Cook	Tim Cook	en	PER
+Q19	Oracle	Oracle Corporation	en	ORG
+Q20	Satya Nadella	Satya Nadella	en	PER
