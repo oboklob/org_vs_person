@@ -87,6 +87,59 @@ class NameClassifier:
 
         return prediction
 
+    def classify_list(self, names: list) -> list:
+        """
+        Classify a list of names as either PER (person) or ORG (organization).
+
+        Args:
+            names: List of names to classify
+
+        Returns:
+            List of classifications ("PER" or "ORG") corresponding to each input name
+
+        Raises:
+            ValueError: If names is None, not a list, empty, or contains None/empty values
+
+        Example:
+            >>> classifier.classify_list(['Bob Smith', 'Google Inc.', 'ministry of defense'])
+            ['PER', 'ORG', 'ORG']
+        """
+        # Input validation
+        if names is None:
+            raise ValueError("Names list cannot be None")
+
+        if not isinstance(names, list):
+            raise ValueError("Names must be a list")
+
+        if not names:
+            raise ValueError("Names list cannot be empty")
+
+        # Validate and clean each name
+        cleaned_names = []
+        for i, name in enumerate(names):
+            if name is None:
+                raise ValueError(f"Name at index {i} cannot be None")
+
+            cleaned_name = str(name).strip()
+            if not cleaned_name:
+                raise ValueError(f"Name at index {i} cannot be empty")
+
+            cleaned_names.append(cleaned_name)
+
+        # Load model on first use
+        self._load_model()
+
+        # Vectorize all names at once (batch processing)
+        X = self._vectorizer.transform(cleaned_names)
+
+        # Predict all at once
+        predictions = self._model.predict(X)
+
+        # Convert to list if needed (numpy array has tolist(), regular list doesn't)
+        if hasattr(predictions, 'tolist'):
+            return predictions.tolist()
+        return list(predictions)
+
     def get_metadata(self) -> Optional[dict]:
         """
         Get model metadata if available.
@@ -129,3 +182,27 @@ def classify(name: str) -> str:
         _default_classifier = NameClassifier()
 
     return _default_classifier.classify(name)
+
+
+def classify_list(names: list) -> list:
+    """
+    Classify a list of names as either PER (person) or ORG (organization).
+
+    This is a convenience function that uses a singleton NameClassifier instance.
+
+    Args:
+        names: List of names to classify
+
+    Returns:
+        List of classifications ("PER" or "ORG") corresponding to each input name
+
+    Example:
+        >>> classify_list(['Bob Smith', 'Google Inc.', 'ministry of defense'])
+        ['PER', 'ORG', 'ORG']
+    """
+    global _default_classifier
+
+    if _default_classifier is None:
+        _default_classifier = NameClassifier()
+
+    return _default_classifier.classify_list(names)

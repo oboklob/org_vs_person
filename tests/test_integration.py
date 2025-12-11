@@ -2,7 +2,7 @@
 import pytest
 from pathlib import Path
 
-from name_classifier import NameClassifier, classify
+from name_classifier import NameClassifier, classify, classify_list
 from name_classifier.config import MODEL_PATH, VECTORIZER_PATH
 
 
@@ -136,6 +136,67 @@ class TestIntegrationWithTrainedModel:
 
         # Both should give same result
         assert result1 == result2
+
+    def test_classify_list_batch_classification(self):
+        """Test batch classification with classify_list."""
+        names = [
+            "Bob Smith",
+            "Google Inc.",
+            "ministry of defense",
+            "Jane Doe",
+            "Microsoft Corporation",
+        ]
+
+        classifier = NameClassifier()
+        results = classifier.classify_list(names)
+
+        # Should return one result per input
+        assert len(results) == len(names)
+
+        # All results should be valid
+        for result in results:
+            assert result in ["PER", "ORG"]
+
+    def test_classify_list_convenience_function(self):
+        """Test the convenience classify_list() function."""
+        results = classify_list(["Bob Smith", "Google Inc.", "ministry of defense"])
+
+        assert len(results) == 3
+        assert all(result in ["PER", "ORG"] for result in results)
+
+    def test_classify_list_performance(self):
+        """Test that batch classification is faster than individual calls."""
+        import time
+
+        classifier = NameClassifier()
+
+        # Generate test data
+        names = [f"Person Name {i}" for i in range(100)]
+
+        # Warm up
+        classifier.classify(names[0])
+
+        # Time individual classifications
+        start = time.time()
+        individual_results = [classifier.classify(name) for name in names]
+        individual_time = time.time() - start
+
+        # Time batch classification
+        start = time.time()
+        batch_results = classifier.classify_list(names)
+        batch_time = time.time() - start
+
+        # Results should be the same
+        assert individual_results == batch_results
+
+        # Batch should be faster (or at least not significantly slower)
+        # We allow some variance, but batch should generally be faster
+        print(f"\nIndividual time: {individual_time:.3f}s, Batch time: {batch_time:.3f}s")
+        print(f"Speedup: {individual_time / batch_time:.1f}x")
+
+        # This is just informational, we don't fail if batch is slightly slower
+        # But we do print the performance comparison
+
 
 
 class TestRealWorldExamples:

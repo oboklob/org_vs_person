@@ -78,24 +78,26 @@ def get_vectorizers():
     }
 
 
-def get_classifiers():
+def get_classifiers(n_jobs=-1):
     """Define classifiers to test with balanced class weights for imbalanced data."""
     return {
         "LogisticRegression": LogisticRegression(
-            max_iter=1000, random_state=42, class_weight="balanced"
+            max_iter=1000, random_state=42, class_weight="balanced", n_jobs=n_jobs
         ),
         "LinearSVC": LinearSVC(max_iter=2000, random_state=42, class_weight="balanced"),
         "RandomForest": RandomForestClassifier(
-            n_estimators=100, random_state=42, n_jobs=-1, class_weight="balanced"
+            n_estimators=100, random_state=42, n_jobs=n_jobs, class_weight="balanced"
         ),
         "MultinomialNB": MultinomialNB(),  # NB doesn't support class_weight
     }
 
 
-def evaluate_model(classifier, X_train, y_train, X_test, y_test, cv=3):
+def evaluate_model(classifier, X_train, y_train, X_test, y_test, cv=3, n_jobs=-1):
     """Evaluate a model using cross-validation and test set."""
     # Cross-validation on training set
-    cv_scores = cross_val_score(classifier, X_train, y_train, cv=cv, scoring="accuracy")
+    cv_scores = cross_val_score(
+        classifier, X_train, y_train, cv=cv, scoring="accuracy", n_jobs=n_jobs
+    )
     cv_mean = cv_scores.mean()
     cv_std = cv_scores.std()
 
@@ -139,6 +141,17 @@ def main():
     parser.add_argument(
         "--cv-folds", type=int, default=3, help="Number of cross-validation folds (default: 3)"
     )
+    parser.add_argument(
+        "--fast-train",
+        action="store_true",
+        help="Use pre-configured fast model (char-ngram TF-IDF + LogisticRegression) instead of grid search",
+    )
+    parser.add_argument(
+        "--n-jobs",
+        type=int,
+        default=-1,
+        help="Number of parallel jobs for multiprocessing (default: -1 for all cores)",
+    )
 
     args = parser.parse_args()
 
@@ -156,86 +169,138 @@ def main():
     X_test_text = test_df["label"].values
     y_test = test_df["type"].values
 
-    # Get configurations
-    vectorizers = get_vectorizers()
-    classifiers = get_classifiers()
-
-    # Results storage
-    results = []
-
-    # Train and evaluate all combinations
-    print("\n" + "=" * 80)
-    print("Training and evaluating models...")
-    print("=" * 80)
-
-    total_combinations = len(vectorizers) * len(classifiers)
-    current = 0
-
-    for vec_name, vectorizer in vectorizers.items():
-        print(f"\n--- Vectorizer: {vec_name} ---")
-
-        # Fit vectorizer on training data
-        print(f"Fitting vectorizer...")
+    # Fast train mode: use pre-configured best model
+    if args.fast_train:
+        print("\n" + "=" * 80)
+        print("FAST TRAIN MODE ENABLED")
+        print("=" * 80)
+        print("Using pre-configured model: TF-IDF char(2-4) + LogisticRegression")
+        print(f"Multiprocessing: {args.n_jobs} jobs")
+        print("=" * 80)
+        
+        # Use best performing configuration from benchmarks
+        vectorizer = TfidfVectorizer(
+            analyzer="char", ngram_range=(2, 4), max_features=10000
+        )
+        classifier = LogisticRegression(
+            max_iter=1000, random_state=42, class_weight="balanced", n_jobs=args.n_jobs
+        )
+        
+        # Fit vectorizer
+        print("\nFitting vectorizer...")
         X_train = vectorizer.fit_transform(X_train_text)
         X_test = vectorizer.transform(X_test_text)
+        
+        # Evaluate
+        print("\nTraining and evaluating model...")
+        metrics = evaluate_model(
+            classifier, X_train, y_train, X_test, y_test, cv=args.cv_folds, n_jobs=args.n_jobs
+        )
+        
+        print("\n" + "=" * 80)
+        print("FAST TRAIN RESULTS")
+        print("=" * 80)
+        print(f"CV Accuracy: {metrics['cv_mean']:.4f} (+/- {metrics['cv_std']:.4f})")
+        print(f"Test Accuracy: {metrics['test_accuracy']:.4f}")
+        print(f"Test F1 (weighted): {metrics['test_f1']:.4f}")
+        print(f"Test F1 ORG: {metrics['test_f1_org']:.4f}")
+        print(f"Test F1 PER: {metrics['test_f1_per']:.4f}")
+        print(f"Train Time: {metrics['train_time']:.2f}s")
+        
+        # Prepare results for saving
+        best_result = {
+            "vectorizer": "tfidf_char_2-4",
+            "classifier": "LogisticRegression",
+            **metrics,
+        }
+        best_vectorizer = vectorizer
+        best_classifier = classifier
+        
+    else:
+        # Full grid search mode
+        # Get configurations
+        vectorizers = get_vectorizers()
+        classifiers = get_classifiers(n_jobs=args.n_jobs)
 
-        for clf_name, classifier in classifiers.items():
-            current += 1
-            print(
-                f"\n[{current}/{total_combinations}] Testing: {vec_name} + {clf_name}"
-            )
+        # Results storage
+        results = []
 
-            # Evaluate
-            metrics = evaluate_model(classifier, X_train, y_train, X_test, y_test, cv=args.cv_folds)
+        # Train and evaluate all combinations
+        print("\n" + "=" * 80)
+        print("Training and evaluating models...")
+        print(f"Multiprocessing: {args.n_jobs} jobs")
+        print("=" * 80)
 
-            result = {
-                "vectorizer": vec_name,
-                "classifier": clf_name,
-                **metrics,
-            }
-            results.append(result)
+        total_combinations = len(vectorizers) * len(classifiers)
+        current = 0
 
-            print(
-                f"  CV Accuracy: {metrics['cv_mean']:.4f} (+/- {metrics['cv_std']:.4f})"
-            )
-            print(f"  Test Accuracy: {metrics['test_accuracy']:.4f}")
-            print(f"  Test F1 (weighted): {metrics['test_f1']:.4f}")
-            print(f"  Test F1 ORG: {metrics['test_f1_org']:.4f}")
-            print(f"  Test F1 PER: {metrics['test_f1_per']:.4f}")
-            print(f"  Train Time: {metrics['train_time']:.2f}s")
+        for vec_name, vectorizer in vectorizers.items():
+            print(f"\n--- Vectorizer: {vec_name} ---")
 
-    # Display results summary
-    print("\n" + "=" * 80)
-    print("RESULTS SUMMARY")
-    print("=" * 80)
+            # Fit vectorizer on training data
+            print(f"Fitting vectorizer...")
+            X_train = vectorizer.fit_transform(X_train_text)
+            X_test = vectorizer.transform(X_test_text)
 
-    results_df = pd.DataFrame(results)
-    results_df = results_df.sort_values("test_accuracy", ascending=False)
+            for clf_name, classifier in classifiers.items():
+                current += 1
+                print(
+                    f"\n[{current}/{total_combinations}] Testing: {vec_name} + {clf_name}"
+                )
 
-    print("\nTop 10 Models (sorted by test accuracy):")
-    print(
-        results_df[
-            ["vectorizer", "classifier", "cv_mean", "test_accuracy", "test_f1", "train_time"]
-        ].head(10).to_string(index=False)
-    )
+                # Evaluate
+                metrics = evaluate_model(
+                    classifier, X_train, y_train, X_test, y_test, cv=args.cv_folds, n_jobs=args.n_jobs
+                )
 
-    # Select best model
-    best_result = results_df.iloc[0]
-    print("\n" + "=" * 80)
-    print("BEST MODEL")
-    print("=" * 80)
-    print(f"Vectorizer: {best_result['vectorizer']}")
-    print(f"Classifier: {best_result['classifier']}")
-    print(f"Test Accuracy: {best_result['test_accuracy']:.4f}")
-    print(f"Test F1 Score: {best_result['test_f1']:.4f}")
+                result = {
+                    "vectorizer": vec_name,
+                    "classifier": clf_name,
+                    **metrics,
+                }
+                results.append(result)
 
-    # Train final model with best configuration
-    print("\n" + "=" * 80)
-    print("Training final model with best configuration...")
-    print("=" * 80)
+                print(
+                    f"  CV Accuracy: {metrics['cv_mean']:.4f} (+/- {metrics['cv_std']:.4f})"
+                )
+                print(f"  Test Accuracy: {metrics['test_accuracy']:.4f}")
+                print(f"  Test F1 (weighted): {metrics['test_f1']:.4f}")
+                print(f"  Test F1 ORG: {metrics['test_f1_org']:.4f}")
+                print(f"  Test F1 PER: {metrics['test_f1_per']:.4f}")
+                print(f"  Train Time: {metrics['train_time']:.2f}s")
 
-    best_vectorizer = vectorizers[best_result["vectorizer"]]
-    best_classifier = classifiers[best_result["classifier"]]
+        # Display results summary
+        print("\n" + "=" * 80)
+        print("RESULTS SUMMARY")
+        print("=" * 80)
+
+        results_df = pd.DataFrame(results)
+        results_df = results_df.sort_values("test_accuracy", ascending=False)
+
+        print("\nTop 10 Models (sorted by test accuracy):")
+        print(
+            results_df[
+                ["vectorizer", "classifier", "cv_mean", "test_accuracy", "test_f1", "train_time"]
+            ].head(10).to_string(index=False)
+        )
+
+        # Select best model
+        best_result = results_df.iloc[0]
+        print("\n" + "=" * 80)
+        print("BEST MODEL")
+        print("=" * 80)
+        print(f"Vectorizer: {best_result['vectorizer']}")
+        print(f"Classifier: {best_result['classifier']}")
+        print(f"Test Accuracy: {best_result['test_accuracy']:.4f}")
+        print(f"Test F1 Score: {best_result['test_f1']:.4f}")
+
+        # Train final model with best configuration
+        print("\n" + "=" * 80)
+        print("Training final model with best configuration...")
+        print("=" * 80)
+
+        best_vectorizer = vectorizers[best_result["vectorizer"]]
+        best_classifier = classifiers[best_result["classifier"]]
 
     # Fit on training data
     X_train_final = best_vectorizer.fit_transform(X_train_text)
@@ -274,6 +339,8 @@ def main():
         "cv_accuracy_std": float(best_result["cv_std"]),
         "training_samples": len(train_df),
         "test_samples": len(test_df),
+        "fast_train_mode": args.fast_train,
+        "n_jobs": args.n_jobs,
     }
 
     with open(metadata_path, "w") as f:

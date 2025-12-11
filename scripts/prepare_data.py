@@ -12,8 +12,10 @@ This script:
 """
 import argparse
 import gzip
+import pickle
 from pathlib import Path
 import sys
+from datetime import datetime
 
 import pandas as pd
 from sklearn.model_selection import train_test_split
@@ -43,6 +45,64 @@ def load_paranames(corpus_path: Path) -> pd.DataFrame:
     print(df["type"].value_counts())
 
     return df
+
+
+def save_cache(df: pd.DataFrame, cache_path: Path) -> None:
+    """
+    Save DataFrame to pickle cache.
+    
+    Args:
+        df: DataFrame to save
+        cache_path: Path to cache file
+    """
+    # Create cache directory if it doesn't exist
+    cache_path.parent.mkdir(parents=True, exist_ok=True)
+    
+    # Save with metadata
+    cache_data = {
+        'data': df,
+        'timestamp': datetime.now().isoformat(),
+        'version': '1.0',
+        'row_count': len(df)
+    }
+    
+    with open(cache_path, 'wb') as f:
+        pickle.dump(cache_data, f)
+    
+    print(f"\nCache saved to: {cache_path}")
+    print(f"Cached {len(df):,} rows")
+
+
+def load_cache(cache_path: Path) -> pd.DataFrame:
+    """
+    Load DataFrame from pickle cache.
+    
+    Args:
+        cache_path: Path to cache file
+    
+    Returns:
+        Cached DataFrame or None if cache doesn't exist/is invalid
+    """
+    if not cache_path.exists():
+        return None
+    
+    try:
+        with open(cache_path, 'rb') as f:
+            cache_data = pickle.load(f)
+        
+        print(f"\n{'='*60}")
+        print("Loading from cache...")
+        print('='*60)
+        print(f"Cache file: {cache_path}")
+        print(f"Cached on: {cache_data['timestamp']}")
+        print(f"Cache version: {cache_data['version']}")
+        print(f"Rows in cache: {cache_data['row_count']:,}")
+        
+        return cache_data['data']
+    except Exception as e:
+        print(f"\nWarning: Failed to load cache: {e}")
+        print("Will rebuild from source data...")
+        return None
 
 
 def filter_and_deduplicate(df: pd.DataFrame) -> pd.DataFrame:
@@ -194,17 +254,57 @@ def main():
     parser.add_argument(
         "--random-state", type=int, default=42, help="Random seed (default: 42)"
     )
+    parser.add_argument(
+        "--use-cache",
+        action="store_true",
+        default=True,
+        help="Use pickle cache for deduped data (default: True)",
+    )
+    parser.add_argument(
+        "--no-cache",
+        action="store_false",
+        dest="use_cache",
+        help="Disable pickle cache",
+    )
+    parser.add_argument(
+        "--cache-path",
+        type=Path,
+        default=Path("data/cache/deduped_data.pkl"),
+        help="Path to pickle cache file (default: data/cache/deduped_data.pkl)",
+    )
+    parser.add_argument(
+        "--force-rebuild",
+        action="store_true",
+        help="Force rebuild from source, ignoring any existing cache",
+    )
+    parser.add_argument(
+        "--n-jobs",
+        type=int,
+        default=-1,
+        help="Number of parallel jobs for processing (default: -1 for all cores)",
+    )
 
     args = parser.parse_args()
 
     # Create output directory
     args.output_dir.mkdir(parents=True, exist_ok=True)
 
-    # Load data
-    df = load_paranames(args.corpus_path)
+    # Try to load from cache if enabled
+    df_processed = None
+    if args.use_cache and not args.force_rebuild:
+        df_processed = load_cache(args.cache_path)
+    
+    # If no cache or cache disabled, load and process from source
+    if df_processed is None:
+        # Load data
+        df = load_paranames(args.corpus_path)
 
-    # Filter and deduplicate
-    df_processed = filter_and_deduplicate(df)
+        # Filter and deduplicate
+        df_processed = filter_and_deduplicate(df)
+        
+        # Save to cache if enabled
+        if args.use_cache:
+            save_cache(df_processed, args.cache_path)
 
     # Sample if requested
     if args.sample_size:

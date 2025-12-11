@@ -1,11 +1,13 @@
 {
-  "training_date": "2025-12-11T12:42:43.805116",
-  "vectorizer": "tfidf_char_3-5",
+  "training_date": "2025-12-11T13:10:07.907262",
+  "vectorizer": "tfidf_word_1-2",
   "classifier": "MultinomialNB",
-  "test_accuracy": 0.838,
-  "test_f1": 0.813271699368141,
-  "cv_accuracy_mean": 0.8177503521307613,
-  "cv_accuracy_std": 0.0038077186236210345,
-  "training_samples": 4000,
-  "test_samples": 1000
+  "test_accuracy": 0.8621,
+  "test_f1": 0.8463543261032135,
+  "cv_accuracy_mean": 0.8613249098289103,
+  "cv_accuracy_std": 0.002654182985145885,
+  "training_samples": 40000,
+  "test_samples": 10000,
+  "fast_train_mode": false,
+  "n_jobs": -1
 }

@@ -2,6 +2,6 @@
 
 __version__ = "0.1.0"
 
-from name_classifier.classifier import NameClassifier, classify
+from name_classifier.classifier import NameClassifier, classify, classify_list
 
-__all__ = ["NameClassifier", "classify"]
+__all__ = ["NameClassifier", "classify", "classify_list"]

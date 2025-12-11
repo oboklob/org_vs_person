@@ -5,7 +5,7 @@ from pathlib import Path
 from unittest.mock import Mock, patch, MagicMock
 import joblib
 
-from name_classifier.classifier import NameClassifier, classify
+from name_classifier.classifier import NameClassifier, classify, classify_list
 
 
 class TestNameClassifier:
@@ -188,3 +188,137 @@ class TestClassifyFunction:
 
         result = clf_module.classify("Apple Inc")
         assert result == "ORG"
+
+
+class TestClassifyList:
+    """Tests for the classify_list method."""
+
+    def test_classify_list_none_raises_error(self):
+        """Test that classify_list raises ValueError for None input."""
+        classifier = NameClassifier()
+
+        with pytest.raises(ValueError, match="Names list cannot be None"):
+            classifier.classify_list(None)
+
+    def test_classify_list_not_list_raises_error(self):
+        """Test that classify_list raises ValueError for non-list input."""
+        classifier = NameClassifier()
+
+        with pytest.raises(ValueError, match="Names must be a list"):
+            classifier.classify_list("not a list")
+
+        with pytest.raises(ValueError, match="Names must be a list"):
+            classifier.classify_list(("tuple", "of", "names"))
+
+    def test_classify_list_empty_list_raises_error(self):
+        """Test that classify_list raises ValueError for empty list."""
+        classifier = NameClassifier()
+
+        with pytest.raises(ValueError, match="Names list cannot be empty"):
+            classifier.classify_list([])
+
+    def test_classify_list_none_element_raises_error(self):
+        """Test that classify_list raises ValueError if list contains None."""
+        classifier = NameClassifier()
+
+        with pytest.raises(ValueError, match="Name at index 1 cannot be None"):
+            classifier.classify_list(["Valid Name", None, "Another Name"])
+
+    def test_classify_list_empty_string_element_raises_error(self):
+        """Test that classify_list raises ValueError if list contains empty string."""
+        classifier = NameClassifier()
+
+        with pytest.raises(ValueError, match="Name at index 2 cannot be empty"):
+            classifier.classify_list(["Valid Name", "Another Name", ""])
+
+        with pytest.raises(ValueError, match="Name at index 0 cannot be empty"):
+            classifier.classify_list(["   ", "Valid Name"])  # Whitespace only
+
+    @patch("name_classifier.classifier.joblib.load")
+    @patch("pathlib.Path.exists")
+    def test_classify_list_success(self, mock_exists, mock_load):
+        """Test successful classification of multiple names."""
+        mock_exists.return_value = True
+
+        mock_model = Mock()
+        mock_model.predict.return_value = ["PER", "ORG", "ORG"]
+
+        mock_vectorizer = Mock()
+        mock_vectorizer.transform.return_value = [[0.1, 0.2], [0.3, 0.4], [0.5, 0.6]]
+
+        mock_load.side_effect = [mock_model, mock_vectorizer]
+
+        classifier = NameClassifier()
+        result = classifier.classify_list(["Bob Smith", "Google Inc.", "ministry of defense"])
+
+        assert result == ["PER", "ORG", "ORG"]
+        mock_vectorizer.transform.assert_called_once_with(["Bob Smith", "Google Inc.", "ministry of defense"])
+        mock_model.predict.assert_called_once()
+
+    @patch("name_classifier.classifier.joblib.load")
+    @patch("pathlib.Path.exists")
+    def test_classify_list_strips_whitespace(self, mock_exists, mock_load):
+        """Test that classify_list strips leading/trailing whitespace from all names."""
+        mock_exists.return_value = True
+
+        mock_model = Mock()
+        mock_model.predict.return_value = ["PER", "ORG"]
+
+        mock_vectorizer = Mock()
+        mock_vectorizer.transform.return_value = [[0.1], [0.2]]
+
+        mock_load.side_effect = [mock_model, mock_vectorizer]
+
+        classifier = NameClassifier()
+        result = classifier.classify_list(["  Bob Smith  ", "  Google Inc.  "])
+
+        # Should be called with stripped versions
+        mock_vectorizer.transform.assert_called_once_with(["Bob Smith", "Google Inc."])
+        assert result == ["PER", "ORG"]
+
+    @patch("name_classifier.classifier.joblib.load")
+    @patch("pathlib.Path.exists")
+    def test_classify_list_single_element(self, mock_exists, mock_load):
+        """Test classify_list with a single element."""
+        mock_exists.return_value = True
+
+        mock_model = Mock()
+        mock_model.predict.return_value = ["PER"]
+
+        mock_vectorizer = Mock()
+        mock_vectorizer.transform.return_value = [[0.1]]
+
+        mock_load.side_effect = [mock_model, mock_vectorizer]
+
+        classifier = NameClassifier()
+        result = classifier.classify_list(["Bob Smith"])
+
+        assert result == ["PER"]
+        assert isinstance(result, list)
+
+
+class TestClassifyListFunction:
+    """Tests for the convenience classify_list() function."""
+
+    @patch("name_classifier.classifier.joblib.load")
+    @patch("pathlib.Path.exists")
+    def test_classify_list_function_integration(self, mock_exists, mock_load):
+        """Test classify_list function end-to-end."""
+        mock_exists.return_value = True
+
+        mock_model = Mock()
+        mock_model.predict.return_value = ["PER", "ORG", "ORG"]
+
+        mock_vectorizer = Mock()
+        mock_vectorizer.transform.return_value = [[0.1], [0.2], [0.3]]
+
+        mock_load.side_effect = [mock_model, mock_vectorizer]
+
+        # Reset the singleton before testing
+        import name_classifier.classifier as clf_module
+
+        clf_module._default_classifier = None
+
+        result = clf_module.classify_list(["Bob Smith", "Google Inc.", "Ministry of Defense"])
+        assert result == ["PER", "ORG", "ORG"]
+
