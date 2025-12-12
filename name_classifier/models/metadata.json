@@ -1,13 +1,18 @@
 {
-  "training_date": "2025-12-11T13:10:07.907262",
-  "vectorizer": "tfidf_word_1-2",
-  "classifier": "MultinomialNB",
-  "test_accuracy": 0.8621,
-  "test_f1": 0.8463543261032135,
-  "cv_accuracy_mean": 0.8613249098289103,
-  "cv_accuracy_std": 0.002654182985145885,
-  "training_samples": 40000,
-  "test_samples": 10000,
+  "training_date": "2025-12-12T09:26:09.686960",
+  "vectorizer": "tfidf_char_2-4",
+  "classifier": "LogisticRegression",
+  "test_accuracy": 0.91791,
+  "test_f1": 0.9176745950549622,
+  "cv_accuracy_mean": 0.9089579999704887,
+  "cv_accuracy_std": 8.352690605480955e-05,
+  "training_samples": 4000000,
+  "test_samples": 1000000,
   "fast_train_mode": false,
-  "n_jobs": -1
+  "n_jobs": -1,
+  "grid_mode": "parameter_grid",
+  "fixed_vectorizer": "tfidf_char_2-4",
+  "fixed_model": "LogisticRegression",
+  "excluded_models": null,
+  "best_params": "{'C': 1.0}"
 }

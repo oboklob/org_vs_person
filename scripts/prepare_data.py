@@ -12,12 +12,15 @@ This script:
 """
 import argparse
 import gzip
+import hashlib
 import pickle
 from pathlib import Path
 import sys
 from datetime import datetime
+from typing import Optional
 
 import pandas as pd
+import yaml
 from sklearn.model_selection import train_test_split
 
 
@@ -47,13 +50,198 @@ def load_paranames(corpus_path: Path) -> pd.DataFrame:
     return df
 
 
-def save_cache(df: pd.DataFrame, cache_path: Path) -> None:
+def load_corpus_config(config_path: Path) -> Optional[dict]:
+    """
+    Load and validate YAML corpus configuration.
+
+    Args:
+        config_path: Path to YAML configuration file
+
+    Returns:
+        Configuration dictionary or None if file doesn't exist
+
+    Raises:
+        ValueError: If configuration is invalid
+    """
+    if not config_path.exists():
+        return None
+
+    print(f"Loading corpus configuration from {config_path}...")
+
+    try:
+        with open(config_path, 'r') as f:
+            config = yaml.safe_load(f)
+    except yaml.YAMLError as e:
+        raise ValueError(f"Failed to parse YAML configuration: {e}")
+
+    # Validate configuration structure
+    if not isinstance(config, dict):
+        raise ValueError("Configuration must be a dictionary")
+
+    if 'sources' not in config:
+        raise ValueError("Configuration must have a 'sources' key")
+
+    if not isinstance(config['sources'], list):
+        raise ValueError("'sources' must be a list")
+
+    if len(config['sources']) == 0:
+        raise ValueError("At least one source must be configured")
+
+    # Validate each source
+    for i, source in enumerate(config['sources']):
+        required_keys = ['name', 'path', 'format', 'columns']
+        for key in required_keys:
+            if key not in source:
+                raise ValueError(f"Source {i} missing required key: {key}")
+
+        # Validate columns
+        if 'name' not in source['columns']:
+            raise ValueError(f"Source {i} columns must specify 'name'")
+
+        # Must have either classification column or fixed_classification
+        has_classification = source['columns'].get('classification') is not None
+        has_fixed = 'fixed_classification' in source
+
+        if not has_classification and not has_fixed:
+            raise ValueError(
+                f"Source {i} ({source['name']}) must have either "
+                f"columns.classification or fixed_classification"
+            )
+
+    print(f"Configuration loaded successfully with {len(config['sources'])} source(s)")
+    return config
+
+
+def get_config_hash(config_path: Path) -> str:
+    """
+    Compute hash of configuration file for cache invalidation.
+
+    Args:
+        config_path: Path to configuration file
+
+    Returns:
+        MD5 hash of file contents
+    """
+    if not config_path.exists():
+        return "no_config"
+
+    with open(config_path, 'rb') as f:
+        return hashlib.md5(f.read()).hexdigest()[:8]
+
+
+def load_corpus_source(source_config: dict) -> pd.DataFrame:
+    """
+    Load a single corpus source based on its configuration.
+
+    Args:
+        source_config: Configuration dictionary for a single source
+
+    Returns:
+        DataFrame with normalized columns: ['label', 'type']
+    """
+    name = source_config['name']
+    path = Path(source_config['path'])
+    file_format = source_config['format']
+    compression = source_config.get('compression')
+    columns = source_config['columns']
+    fixed_classification = source_config.get('fixed_classification')
+    filters = source_config.get('filters', {})
+
+    print(f"\nLoading source: {name}")
+    print(f"  Path: {path}")
+    print(f"  Format: {file_format}")
+    print(f"  Compression: {compression}")
+
+    if not path.exists():
+        raise FileNotFoundError(f"Corpus file not found: {path}")
+
+    # Load file based on format
+    if file_format == 'tsv':
+        df = pd.read_csv(path, sep='\t', compression=compression)
+    elif file_format == 'csv':
+        df = pd.read_csv(path, compression=compression)
+    else:
+        raise ValueError(f"Unsupported format: {file_format}")
+
+    print(f"  Loaded {len(df):,} rows")
+
+    # Extract and rename columns
+    name_col = columns['name']
+    classification_col = columns.get('classification')
+
+    if name_col not in df.columns:
+        raise ValueError(f"Column '{name_col}' not found in {path}")
+
+    # Create normalized dataframe
+    result_df = pd.DataFrame()
+    result_df['label'] = df[name_col]
+
+    if classification_col:
+        # Use classification from column
+        if classification_col not in df.columns:
+            raise ValueError(f"Column '{classification_col}' not found in {path}")
+        result_df['type'] = df[classification_col]
+    elif fixed_classification:
+        # Use fixed classification for all rows
+        result_df['type'] = fixed_classification
+        print(f"  Applied fixed classification: {fixed_classification}")
+    else:
+        raise ValueError(f"Source {name} has no classification method")
+
+    # Apply filters
+    if 'type' in filters:
+        types_to_keep = filters['type']
+        before_count = len(result_df)
+        result_df = result_df[result_df['type'].isin(types_to_keep)]
+        print(f"  Filtered to types {types_to_keep}: {before_count:,} -> {len(result_df):,} rows")
+
+    print(f"  Final type distribution:")
+    print(result_df['type'].value_counts().to_string(header=False))
+
+    return result_df
+
+
+def load_all_corpus_sources(config: dict) -> pd.DataFrame:
+    """
+    Load and merge all configured corpus sources.
+
+    Args:
+        config: Configuration dictionary with 'sources' key
+
+    Returns:
+        Combined DataFrame with all sources merged
+    """
+    print("\n" + "=" * 60)
+    print("Loading all corpus sources...")
+    print("=" * 60)
+
+    all_dfs = []
+    for source_config in config['sources']:
+        df = load_corpus_source(source_config)
+        all_dfs.append(df)
+
+    # Merge all sources
+    print("\n" + "=" * 60)
+    print("Merging all sources...")
+    print("=" * 60)
+
+    combined_df = pd.concat(all_dfs, ignore_index=True)
+
+    print(f"\nTotal rows from all sources: {len(combined_df):,}")
+    print(f"Combined type distribution:")
+    print(combined_df['type'].value_counts())
+
+    return combined_df
+
+
+def save_cache(df: pd.DataFrame, cache_path: Path, config_hash: str = "no_config") -> None:
     """
     Save DataFrame to pickle cache.
     
     Args:
         df: DataFrame to save
         cache_path: Path to cache file
+        config_hash: Hash of configuration file for cache validation
     """
     # Create cache directory if it doesn't exist
     cache_path.parent.mkdir(parents=True, exist_ok=True)
@@ -62,8 +250,9 @@ def save_cache(df: pd.DataFrame, cache_path: Path) -> None:
     cache_data = {
         'data': df,
         'timestamp': datetime.now().isoformat(),
-        'version': '1.0',
-        'row_count': len(df)
+        'version': '1.1',
+        'row_count': len(df),
+        'config_hash': config_hash
     }
     
     with open(cache_path, 'wb') as f:
@@ -71,14 +260,16 @@ def save_cache(df: pd.DataFrame, cache_path: Path) -> None:
     
     print(f"\nCache saved to: {cache_path}")
     print(f"Cached {len(df):,} rows")
+    print(f"Config hash: {config_hash}")
 
 
-def load_cache(cache_path: Path) -> pd.DataFrame:
+def load_cache(cache_path: Path, expected_config_hash: str = "no_config") -> Optional[pd.DataFrame]:
     """
     Load DataFrame from pickle cache.
     
     Args:
         cache_path: Path to cache file
+        expected_config_hash: Expected config hash for validation
     
     Returns:
         Cached DataFrame or None if cache doesn't exist/is invalid
@@ -90,19 +281,81 @@ def load_cache(cache_path: Path) -> pd.DataFrame:
         with open(cache_path, 'rb') as f:
             cache_data = pickle.load(f)
         
+        # Check config hash if present
+        cached_hash = cache_data.get('config_hash', 'no_config')
+        if cached_hash != expected_config_hash:
+            print(f"\nCache config hash mismatch:")
+            print(f"  Cached: {cached_hash}")
+            print(f"  Current: {expected_config_hash}")
+            print(f"Cache invalidated - will rebuild from source...")
+            return None
+        
         print(f"\n{'='*60}")
         print("Loading from cache...")
         print('='*60)
         print(f"Cache file: {cache_path}")
         print(f"Cached on: {cache_data['timestamp']}")
-        print(f"Cache version: {cache_data['version']}")
+        print(f"Cache version: {cache_data.get('version', '1.0')}")
         print(f"Rows in cache: {cache_data['row_count']:,}")
+        print(f"Config hash: {cached_hash}")
         
         return cache_data['data']
     except Exception as e:
         print(f"\nWarning: Failed to load cache: {e}")
         print("Will rebuild from source data...")
         return None
+
+
+def clean_data(df: pd.DataFrame, latin_only: bool = False) -> pd.DataFrame:
+    """
+    Clean the dataset by removing invalid entries.
+    
+    Args:
+        df: Input DataFrame with 'label' and 'type' columns
+        latin_only: If True, keep only names with Latin characters (A-Z, a-z, spaces, hyphens, apostrophes)
+    
+    Returns:
+        Cleaned DataFrame
+    """
+    print("\n" + "=" * 60)
+    print("Cleaning data...")
+    print("=" * 60)
+    
+    original_count = len(df)
+    print(f"\nOriginal size: {original_count:,} rows")
+    
+    # Remove rows with null values in label or type columns
+    df_clean = df.dropna(subset=["label", "type"]).copy()
+    null_removed = original_count - len(df_clean)
+    if null_removed > 0:
+        print(f"Removed {null_removed:,} rows with null labels or types")
+    
+    # Remove empty strings (after stripping whitespace)
+    df_clean["label"] = df_clean["label"].astype(str).str.strip()
+    df_clean = df_clean[df_clean["label"] != ""]
+    empty_removed = len(df) - null_removed - len(df_clean)
+    if empty_removed > 0:
+        print(f"Removed {empty_removed:,} rows with empty/whitespace-only labels")
+    
+    # Optional: Filter to Latin-only characters
+    if latin_only:
+        import re
+        # Pattern: Latin letters, spaces, hyphens, apostrophes, periods
+        latin_pattern = re.compile(r'^[A-Za-z\s\-\'.]+$')
+        
+        before_latin = len(df_clean)
+        df_clean = df_clean[df_clean["label"].str.match(latin_pattern, na=False)]
+        non_latin_removed = before_latin - len(df_clean)
+        
+        if non_latin_removed > 0:
+            print(f"Removed {non_latin_removed:,} rows with non-Latin characters")
+            print(f"  (Kept only Latin alphabet, spaces, hyphens, apostrophes, periods)")
+    
+    total_removed = original_count - len(df_clean)
+    print(f"\nTotal rows removed: {total_removed:,}")
+    print(f"Remaining rows: {len(df_clean):,}")
+    
+    return df_clean
 
 
 def filter_and_deduplicate(df: pd.DataFrame) -> pd.DataFrame:
@@ -283,28 +536,54 @@ def main():
         default=-1,
         help="Number of parallel jobs for processing (default: -1 for all cores)",
     )
+    parser.add_argument(
+        "--config-path",
+        type=Path,
+        default=Path("corpus/corpus_config.yaml"),
+        help="Path to corpus configuration YAML file (default: corpus/corpus_config.yaml)",
+    )
+    parser.add_argument(
+        "--latin-only",
+        action="store_true",
+        help="Keep only names with Latin characters (removes non-transliterated names)",
+    )
 
     args = parser.parse_args()
 
     # Create output directory
     args.output_dir.mkdir(parents=True, exist_ok=True)
 
+    # Try to load configuration
+    config = load_corpus_config(args.config_path)
+    config_hash = get_config_hash(args.config_path)
+
     # Try to load from cache if enabled
     df_processed = None
     if args.use_cache and not args.force_rebuild:
-        df_processed = load_cache(args.cache_path)
+        df_processed = load_cache(args.cache_path, config_hash)
     
     # If no cache or cache disabled, load and process from source
     if df_processed is None:
-        # Load data
-        df = load_paranames(args.corpus_path)
+        # Load data based on configuration
+        if config:
+            # New: Load from multiple sources using configuration
+            df = load_all_corpus_sources(config)
+        else:
+            # Legacy: Load from paranames file only
+            print("\nNo configuration file found, using legacy paranames loader...")
+            print(f"To use multiple corpus sources, create a config file at: {args.config_path}")
+            print(f"See corpus/corpus_config.example.yaml for an example\n")
+            df = load_paranames(args.corpus_path)
 
+        # Clean data (remove null, empty, whitespace-only labels)
+        df = clean_data(df, latin_only=args.latin_only)
+        
         # Filter and deduplicate
         df_processed = filter_and_deduplicate(df)
         
         # Save to cache if enabled
         if args.use_cache:
-            save_cache(df_processed, args.cache_path)
+            save_cache(df_processed, args.cache_path, config_hash)
 
     # Sample if requested
     if args.sample_size:

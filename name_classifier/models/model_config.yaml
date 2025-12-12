@@ -1,0 +1,22 @@
+fast_train:
+  vectorizer:
+    type: CountVectorizer
+    analyzer: char
+    ngram_range:
+    - 2
+    - 4
+    max_features: 10000
+  model:
+    type: RandomForest
+    params:
+      n_estimators: 200
+      random_state: 42
+      class_weight: balanced
+      max_depth: null
+  accuracy:
+    test_accuracy: 0.9235
+    test_f1: 0.9231786560076759
+    cv_mean: 0.9192650001364905
+    cv_std: 0.00013426821882983795
+  last_updated: '2025-12-11T19:36:43.492275'
+  training_date: '2025-12-11T19:36:43.492282'

@@ -64,10 +64,60 @@ pip install -r requirements-dev.txt
 
 ### Training the Model
 
+#### Corpus Configuration (Optional)
+
+The data preparation script supports loading data from multiple corpus files with different formats using a YAML configuration file. This is useful when you want to combine multiple data sources (e.g., paranames dataset + company registers + custom name lists).
+
+**Configuration Schema:**
+
+Create a `corpus/corpus_config.yaml` file (see `corpus/corpus_config.example.yaml` for a complete example):
+
+```yaml
+sources:
+  - name: "paranames"
+    path: "corpus/paranames.tsv.gz"
+    format: "tsv"                    # "tsv" or "csv"
+    compression: "gzip"              # "gzip" or null
+    columns:
+      name: "label"                  # Column with names
+      classification: "type"         # Column with ORG/PER classification
+    filters:
+      type: ["ORG", "PER"]          # Optional: filter to specific types
+  
+  - name: "company_register"
+    path: "corpus/organizations.csv"
+    format: "csv"
+    compression: null
+    columns:
+      name: "organization_name"
+      classification: null           # No classification column
+    fixed_classification: "ORG"     # Apply ORG to all rows
+```
+
+Each source supports:
+- Different file formats (TSV, CSV)
+- Different compression (gzip or uncompressed)
+- Column mapping to standardize data
+- Fixed classification when source has no classification column
+- Filters to include only specific types
+
+**How it works:**
+- If `corpus/corpus_config.yaml` exists, the script loads and merges all configured sources
+- If no config exists, it falls back to loading only `corpus/paranames.tsv.gz` (legacy mode)
+- The cache is automatically invalidated when the configuration changes
+
+#### Preparing the Data
+
 1. **Prepare the data:**
    ```bash
-   # Full dataset with caching (recommended)
+   # With configuration (recommended for multiple sources)
    python scripts/prepare_data.py
+   
+   # With custom config path
+   python scripts/prepare_data.py --config-path my_config.yaml
+   
+   # Keep only Latin-script names (filters out Japanese, Chinese, Arabic, etc.)
+   python scripts/prepare_data.py --latin-only
    
    # Sample dataset for quick experimentation
    python scripts/prepare_data.py --sample-size 100000
@@ -78,6 +128,12 @@ pip install -r requirements-dev.txt
    # Disable caching
    python scripts/prepare_data.py --no-cache
    ```
+
+   **Data Cleaning:**
+   The script automatically cleans the data by:
+   - Removing rows with null/empty labels
+   - Removing whitespace-only labels
+   - Optionally filtering to Latin-only characters with `--latin-only` (removes non-transliterated names in Japanese, Chinese, Cyrillic, Arabic, etc.)
 
 2. **Train and evaluate models:**
    ```bash

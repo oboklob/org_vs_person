@@ -1,0 +1,47 @@
+# Corpus Configuration Example
+# 
+# This file demonstrates how to configure multiple corpus sources for the name classifier.
+# Copy this file to 'corpus_config.yaml' and adjust paths and settings as needed.
+#
+# Each source can have different formats, compression, and column mappings.
+# The prepare_data.py script will load all sources and merge them before deduplication.
+
+sources:
+  # Example 1: Paranames dataset (TSV with gzip compression)
+  - name: "paranames"
+    path: "corpus/paranames.tsv.gz"
+    format: "tsv"
+    compression: "gzip"
+    columns:
+      name: "label"              # Column containing the name/label
+      classification: "type"     # Column containing the classification (ORG/PER)
+    filters:
+      type: ["ORG", "PER"]       # Only keep these classification types
+  
+  # Example 2: Company register (CSV with fixed classification)
+  # Use this when all entries in the file have the same classification
+  - name: "nexus_export"
+    path: "corpus/organisation_names.csv.gz"
+    format: "csv"
+    compression: "gzip"
+    columns:
+      name: "name"  # Column containing organization names
+      classification: null       # No classification column in this file
+    fixed_classification: "ORG"  # Apply ORG classification to all rows
+  
+# Configuration Schema:
+# ====================
+# sources: List of corpus sources to load
+#
+# Each source has:
+#   name: (string) Identifier for the source (used in logging)
+#   path: (string) Path to the corpus file (relative to project root or absolute)
+#   format: (string) File format - "tsv" or "csv"
+#   compression: (string|null) Compression type - "gzip" or null for uncompressed
+#   columns:
+#     name: (string) Column name containing the names/labels
+#     classification: (string|null) Column name containing classifications, or null if using fixed_classification
+#   fixed_classification: (string, optional) Fixed classification to apply to all rows (ORG or PER)
+#                         Only used when columns.classification is null
+#   filters: (dict, optional) Filters to apply after loading
+#     type: (list) List of classification types to keep (e.g., ["ORG", "PER"])
