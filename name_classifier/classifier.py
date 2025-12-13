@@ -1,12 +1,28 @@
 """Main classifier module for name type classification."""
 import json
 import warnings
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
+from typing import Optional, List, Dict, Tuple
 
 import joblib
+import numpy as np
 
 from name_classifier.config import MODEL_PATH, VECTORIZER_PATH, METADATA_PATH
+
+
+@dataclass
+class ClassificationResult:
+    """Result of classification with diagnostics.
+    
+    Attributes:
+        label: Predicted label ("PER" or "ORG")
+        p_org: Probability of organization class (0.0 to 1.0)
+        reason_codes: Dictionary containing diagnostic information
+    """
+    label: str
+    p_org: float
+    reason_codes: Dict[str, any]
 
 
 class NameClassifier:
@@ -152,6 +168,151 @@ class NameClassifier:
                 self._metadata = json.load(f)
 
         return self._metadata
+    
+    def classify_with_diagnostics(
+        self, 
+        name: str,
+        use_tier_a_shortcut: bool = False
+    ) -> ClassificationResult:
+        """Classify a name with diagnostic information.
+        
+        Args:
+            name: The name to classify
+            use_tier_a_shortcut: If True, automatically classify Tier A legal forms as ORG
+                                (disabled by default for safety)
+        
+        Returns:
+            ClassificationResult with label, probability, and reason codes
+            
+        Raises:
+            ValueError: If name is None or empty
+        """
+        # Input validation
+        if name is None:
+            raise ValueError("Name cannot be None")
+        
+        name = str(name).strip()
+        if not name:
+            raise ValueError("Name cannot be empty")
+        
+        # Load model on first use
+        self._load_model()
+        
+        # Initialize ISO matcher for diagnostics
+        from name_classifier.iso20275_matcher import ISO20275Matcher
+        iso_matcher = ISO20275Matcher()
+        
+        # Check for legal form match
+        suffix_match = iso_matcher.match_legal_form(name)
+        
+        # Optional Tier A shortcut
+        if use_tier_a_shortcut and suffix_match and suffix_match.metadata.tier == 'A':
+            return ClassificationResult(
+                label="ORG",
+                p_org=0.99,
+                reason_codes={
+                    "matched_legal_form": suffix_match.suffix,
+                    "legal_form_tier": "A",
+                    "is_ambiguous_short": False,
+                    "shortcut_applied": True
+                }
+            )
+        
+        # Get prediction and probability
+        X = self._vectorizer.transform([name])
+        prediction = self._model.predict(X)[0]
+        
+        # Get probability if model supports it
+        if hasattr(self._model, 'predict_proba'):
+            proba = self._model.predict_proba(X)[0]
+            # Assuming ORG is index 1, PER is index 0 (or vice versa)
+            # Need to check which class is which
+            classes = self._model.classes_
+            org_idx = np.where(classes == 'ORG')[0][0] if 'ORG' in classes else 1
+            p_org = float(proba[org_idx])
+        else:
+            # Model doesn't support probabilities, use binary
+            p_org = 1.0 if prediction == 'ORG' else 0.0
+        
+        # Build reason codes
+        reason_codes = {
+            "matched_legal_form": suffix_match.suffix if suffix_match else None,
+            "legal_form_tier": suffix_match.metadata.tier if suffix_match else None,
+            "is_ambiguous_short": suffix_match.is_ambiguous_short if suffix_match else False,
+            "shortcut_applied": False
+        }
+        
+        # Add top features if model has coefficients
+        if hasattr(self._model, 'coef_'):
+            try:
+                # Get feature importances
+                coef = self._model.coef_[0] if len(self._model.coef_.shape) > 1 else self._model.coef_
+                
+                # Get engineered feature names (last 32 features)
+                from name_classifier.feature_engineering import get_feature_names
+                feature_names = get_feature_names()
+                
+                # Get the engineered feature values
+                X_dense = X.toarray() if hasattr(X, 'toarray') else X
+                eng_features = X_dense[0, -32:]  # Last 32 are engineered
+                eng_coef = coef[-32:]  # Last 32 coefficients
+                
+                # Calculate contribution scores
+                contributions = eng_features * eng_coef
+                
+                # Get top 5 absolute contributions
+                top_indices = np.argsort(np.abs(contributions))[-5:][::-1]
+                top_features = [
+                    (feature_names[i], float(eng_features[i]), float(contributions[i]))
+                    for i in top_indices
+                    if eng_features[i] != 0  # Only non-zero features
+                ]
+                
+                reason_codes["top_features"] = top_features[:5]
+            except Exception as e:
+                # If feature extraction fails, don't include it
+                reason_codes["top_features_error"] = str(e)
+        
+        return ClassificationResult(
+            label=prediction,
+            p_org=p_org,
+            reason_codes=reason_codes
+        )
+    
+    def classify_list_with_diagnostics(
+        self,
+        names: List[str],
+        use_tier_a_shortcut: bool = False
+    ) -> List[ClassificationResult]:
+        """Classify a list of names with diagnostics.
+        
+        Args:
+            names: List of names to classify
+            use_tier_a_shortcut: If True, automatically classify Tier A legal forms as ORG
+            
+        Returns:
+            List of ClassificationResults with diagnostics
+            
+        Raises:
+            ValueError: If names is invalid
+        """
+        # Input validation
+        if names is None:
+            raise ValueError("Names list cannot be None")
+        
+        if not isinstance(names, list):
+            raise ValueError("Names must be a list")
+        
+        if not names:
+            raise ValueError("Names list cannot be empty")
+        
+        # Classify each name (could be optimized for batch processing)
+        results = []
+        for name in names:
+            result = self.classify_with_diagnostics(name, use_tier_a_shortcut)
+            results.append(result)
+        
+        return results
 
 
 # Singleton instance for convenience

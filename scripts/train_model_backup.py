@@ -20,8 +20,9 @@ from pathlib import Path
 import joblib
 import numpy as np
 import pandas as pd
-from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer, HashingVectorizer
+from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
 from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.svm import LinearSVC
 from sklearn.model_selection import cross_val_score
@@ -76,10 +77,17 @@ def create_model_from_config(config: dict, n_jobs: int = -1):
     model_type = config.get("type", "LogisticRegression")
     params = config.get("params", {}).copy()
     
+    # Add n_jobs if the model supports it
+    if model_type in ["LogisticRegression", "RandomForest"]:
+        params["n_jobs"] = n_jobs
+    
     if model_type == "LogisticRegression":
         return LogisticRegression(**params)
     elif model_type == "LinearSVC":
         return LinearSVC(**params)
+    elif model_type == "RandomForest":
+        # Map to actual class name
+        return RandomForestClassifier(**params)
     elif model_type == "MultinomialNB":
         return MultinomialNB(**params)
     else:
@@ -216,7 +224,6 @@ def load_data(data_dir: Path) -> tuple[pd.DataFrame, pd.DataFrame]:
 def get_vectorizers():
     """Define vectorizer configurations to test."""
     return {
-        """
         "tfidf_char_2-4": TfidfVectorizer(
             analyzer="char", ngram_range=(2, 4), max_features=10000
         ),
@@ -235,16 +242,6 @@ def get_vectorizers():
         "count_char_2-4": CountVectorizer(
             analyzer="char", ngram_range=(2, 4), max_features=10000
         ),
-        """
-        "hash_char_2-4_64k": HashingVectorizer(
-            analyzer="char", ngram_range=(2, 4), n_features=2**16, alternate_sign=False  # 65k, non-negative for MultinomialNB
-        ),
-        "hash_char_3-5_64k": HashingVectorizer(
-            analyzer="char", ngram_range=(3, 5), n_features=2**16, alternate_sign=False  # 65k, non-negative for MultinomialNB
-        ),
-        "hash_char_3-5_256k": HashingVectorizer(
-            analyzer="char", ngram_range=(3, 5), n_features=2**18, alternate_sign=False  # 262k, non-negative for MultinomialNB
-        ),
     }
 
 
@@ -252,9 +249,12 @@ def get_classifiers(n_jobs=-1):
     """Define classifiers to test with balanced class weights for imbalanced data."""
     return {
         "LogisticRegression": LogisticRegression(
-            max_iter=1000, random_state=42, class_weight="balanced"
+            max_iter=1000, random_state=42, class_weight="balanced", n_jobs=n_jobs
         ),
         "LinearSVC": LinearSVC(max_iter=2000, random_state=42, class_weight="balanced"),
+        "RandomForest": RandomForestClassifier(
+            n_estimators=100, random_state=42, n_jobs=n_jobs, class_weight="balanced"
+        ),
         "MultinomialNB": MultinomialNB(),  # NB doesn't support class_weight
     }
 
@@ -264,7 +264,7 @@ def get_model_param_grids(n_jobs=-1):
     return {
         "LogisticRegression": [
             {
-                "model": [LogisticRegression(max_iter=1000, random_state=42, class_weight="balanced")],
+                "model": [LogisticRegression(max_iter=1000, random_state=42, class_weight="balanced", n_jobs=n_jobs)],
                 "params": {"C": [0.01, 0.1, 1.0, 10.0]},
             }
         ],
@@ -274,7 +274,15 @@ def get_model_param_grids(n_jobs=-1):
                 "params": {"C": [0.01, 0.1, 1.0, 10.0]},
             }
         ],
-
+        "RandomForest": [
+            {
+                "model": [RandomForestClassifier(random_state=42, n_jobs=n_jobs, class_weight="balanced")],
+                "params": {
+                    "n_estimators": [50, 100, 200],
+                    "max_depth": [None, 10, 20],
+                },
+            }
+        ],
         "MultinomialNB": [
             {
                 "model": [MultinomialNB()],

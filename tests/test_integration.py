@@ -1,8 +1,9 @@
 """Integration tests for the name classifier (requires trained model)."""
 import pytest
+import pandas as pd
 from pathlib import Path
 
-from name_classifier import NameClassifier, classify, classify_list
+from name_classifier import NameClassifier
 from name_classifier.config import MODEL_PATH, VECTORIZER_PATH
 
 
@@ -54,10 +55,11 @@ class TestIntegrationWithTrainedModel:
 
     def test_classify_with_convenience_function(self):
         """Test the convenience classify() function."""
-        result = classify("Bill Gates")
+        classifier = NameClassifier()
+        result = classifier.classify("Bill Gates")
         assert result in ["PER", "ORG"]
 
-        result = classify("Microsoft")
+        result = classifier.classify("Microsoft")
         assert result in ["PER", "ORG"]
 
     def test_classify_edge_cases(self):
@@ -159,7 +161,8 @@ class TestIntegrationWithTrainedModel:
 
     def test_classify_list_convenience_function(self):
         """Test the convenience classify_list() function."""
-        results = classify_list(["Bob Smith", "Google Inc.", "ministry of defense"])
+        classifier = NameClassifier()
+        results = classifier.classify_list(["Bob Smith", "Google Inc.", "ministry of defense"])
 
         assert len(results) == 3
         assert all(result in ["PER", "ORG"] for result in results)
@@ -219,7 +222,8 @@ class TestRealWorldExamples:
     )
     def test_known_entities(self, name, expected_type):
         """Test classification of well-known entities."""
-        result = classify(name)
+        classifier = NameClassifier()
+        result = classifier.classify(name)
 
         # We don't assert strict equality since the model might not be perfect
         # But we record what it predicts for debugging
