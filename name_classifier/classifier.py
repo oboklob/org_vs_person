@@ -73,6 +73,12 @@ class NameClassifier:
     def classify(self, name: str) -> str:
         """
         Classify a name as either PER (person) or ORG (organization).
+        
+        This is the recommended method for general-purpose classification.
+        Uses ML model only for maximum speed (~57,000 names/sec, 96.34% precision).
+        
+        For higher precision (99.97%) with explainability, use 
+        classify_with_diagnostics() with use_tier_a_shortcut=True.
 
         Args:
             name: The name to classify
@@ -82,6 +88,13 @@ class NameClassifier:
 
         Raises:
             ValueError: If name is None or empty
+            
+        Example:
+            >>> classifier = NameClassifier()
+            >>> classifier.classify("Microsoft Corporation")
+            'ORG'
+            >>> classifier.classify("John Smith")
+            'PER'
         """
         # Input validation
         if name is None:
@@ -106,6 +119,13 @@ class NameClassifier:
     def classify_list(self, names: list) -> list:
         """
         Classify a list of names as either PER (person) or ORG (organization).
+        
+        This is the recommended method for batch classification.
+        Uses ML model only for maximum speed (~57,000 names/sec, 96.34% precision).
+        Optimized for batch processing with vectorization.
+        
+        For higher precision (99.97%) with explainability, use 
+        classify_list_with_diagnostics() with use_tier_a_shortcut=True.
 
         Args:
             names: List of names to classify
@@ -117,6 +137,7 @@ class NameClassifier:
             ValueError: If names is None, not a list, empty, or contains None/empty values
 
         Example:
+            >>> classifier = NameClassifier()
             >>> classifier.classify_list(['Bob Smith', 'Google Inc.', 'ministry of defense'])
             ['PER', 'ORG', 'ORG']
         """
@@ -174,18 +195,40 @@ class NameClassifier:
         name: str,
         use_tier_a_shortcut: bool = False
     ) -> ClassificationResult:
-        """Classify a name with diagnostic information.
+        """Classify a name with diagnostic information and optional high-precision mode.
+        
+        This method provides explainability through legal form detection and feature analysis.
+        Note: Slower than classify() due to additional diagnostics (~50% slower).
+        
+        Performance characteristics:
+        - use_tier_a_shortcut=False: 96.34% precision (same as classify())
+        - use_tier_a_shortcut=True: 99.97% precision for Tier A detections
+        
+        Use this when:
+        - You need explainability (legal form detection, feature contributions)
+        - You want higher precision for organization detection (use_tier_a_shortcut=True)
+        - You're willing to trade speed for diagnostic information
         
         Args:
             name: The name to classify
             use_tier_a_shortcut: If True, automatically classify Tier A legal forms as ORG
-                                (disabled by default for safety)
+                                with 99.97% precision (recommended for high-precision workflows)
         
         Returns:
             ClassificationResult with label, probability, and reason codes
             
         Raises:
             ValueError: If name is None or empty
+            
+        Example:
+            >>> classifier = NameClassifier()
+            >>> result = classifier.classify_with_diagnostics("Acme Ltd", use_tier_a_shortcut=True)
+            >>> result.label
+            'ORG'
+            >>> result.reason_codes['matched_legal_form']
+            'ltd'
+            >>> result.reason_codes['legal_form_tier']
+            'A'
         """
         # Input validation
         if name is None:

@@ -60,7 +60,146 @@ for name, conf in certain_persons:
 - **Uncertainty handling**: Identify ambiguous names that need manual review
 - **Threshold control**: Adjust `min_confidence` based on your precision/recall needs
 
-## Advanced Usage
+## Performance & Precision Trade-offs
+
+The classifier offers different methods optimized for different use cases. Choose based on your speed vs precision requirements:
+
+### Quick Reference
+
+| Method | Speed | Precision | Use When |
+|--------|-------|-----------|----------|
+| `classify()` / `classify_list()` | **~57k names/sec** | 96.34% | General-purpose, batch processing |
+| `classify_with_diagnostics()` | **~30k names/sec** | 96.34% | Need explainability |
+| `classify_with_diagnostics(use_tier_a_shortcut=True)` | **~20k names/sec** | **99.97%** for detected ORGs | High-precision requirements |
+
+### Default: Fast & Accurate
+
+For most use cases, the standard methods provide excellent performance:
+
+```python
+from name_classifier import classify, classify_list
+
+# Single classification: ~57k names/sec, 96.34% precision
+result = classify("Microsoft Corporation")
+
+# Batch classification: ~57k names/sec, optimized with vectorization
+results = classify_list(["Bob Smith", "Google Inc", "Jane Doe"])
+```
+
+**Recommended for:**
+- ✓ General-purpose classification
+- ✓ Batch processing (millions of names)
+- ✓ Performance-critical applications
+- ✓ When 96% precision is acceptable
+
+### High Precision: Explainable Results
+
+When you need to **explain why** something was classified as ORG:
+
+```python
+from name_classifier import NameClassifier
+
+classifier = NameClassifier()
+
+# Get classification with explanation
+result = classifier.classify_with_diagnostics("Acme Corporation Ltd")
+
+print(f"Label: {result.label}")
+print(f"Confidence: {result.p_org:.2%}")
+
+if result.reason_codes['matched_legal_form']:
+    print(f"Legal form detected: {result.reason_codes['matched_legal_form']}")
+    print(f"Tier: {result.reason_codes['legal_form_tier']}")
+```
+
+**Recommended for:**
+- ✓ User-facing applications (show why)
+- ✓ Audit trails and compliance
+- ✓ Debugging classification issues
+- ✓ When you need feature importance
+
+### Ultra-High Precision: 99.97% Accuracy
+
+For workflows where **false positives are costly**:
+
+```python
+from name_classifier import NameClassifier
+
+classifier = NameClassifier()
+
+# Enable high-precision mode for organization detection
+result = classifier.classify_with_diagnostics(
+    "Acme Ltd", 
+    use_tier_a_shortcut=True  # 99.97% precision for Tier A legal forms
+)
+
+if result.reason_codes.get('shortcut_applied'):
+    print(f"High-confidence ORG detection via legal form: {result.reason_codes['matched_legal_form']}")
+else:
+    print(f"Standard ML classification: {result.label}")
+```
+
+**Recommended for:**
+- ✓ Automated processing (can't tolerate false positives)
+- ✓ Compliance/regulatory use cases
+- ✓ Two-stage workflows (filter obvious cases first)
+- ✓ When precision > recall
+
+**Note:** High-precision mode catches ~28% of ORGs with 99.97% accuracy, while the standard model catches ~92% with 96.34% accuracy.
+
+### Hybrid Approach: Best of Both Worlds
+
+Combine high precision for obvious cases with comprehensive coverage:
+
+```python
+from name_classifier import NameClassifier
+from name_classifier.fast_org_detector import FastOrgDetector
+
+classifier = NameClassifier()
+detector = FastOrgDetector(tier_filter=['A', 'B'])  # 99.59% precision
+
+# Stage 1: Fast high-precision filter (catches ~25% with 99.6% precision)
+detected_orgs, uncertain = detector.filter_orgs(names)
+
+# Stage 2: ML classifier for remaining 75%
+uncertain_classifications = classifier.classify_list(uncertain)
+
+# Combine results with confidence levels
+results = []
+for name in names:
+    if name in detected_orgs:
+        results.append((name, 'ORG', 0.997))  # High precision
+    else:
+        idx = uncertain.index(name)
+        label = uncertain_classifications[idx]
+        results.append((name, label, 0.963))  # Standard precision
+```
+
+**Recommended for:**
+- ✓ Best balance of speed and precision
+- ✓ Explainability for ~25% of cases
+- ✓ Cost optimization (if ML inference is expensive)
+- ✓ Quality assurance workflows
+
+### Performance Benchmarks
+
+Based on testing with 50,000 samples:
+
+**Speed (throughput):**
+- `classify_list()`: ~57,000 names/sec
+- `classify_with_diagnostics()`: ~30,000 names/sec (50% slower)
+- Filter + Model hybrid: ~20,000-40,000 names/sec (depends on batch size)
+
+**Accuracy (ORG detection precision):**
+- Standard model: 96.34%
+- Filter Tier A only: 99.97%
+- Filter Tier A+B: 99.59%
+- Filter all tiers: 99.35%
+
+See `docs/FILTER_PERFORMANCE_ANALYSIS.md` and `docs/FILTER_ACCURACY_ANALYSIS.md` for detailed benchmarks.
+
+
+## Advanced API Usage
 
 ```python
 from name_classifier import NameClassifier
@@ -80,6 +219,7 @@ results = classifier.classify_list(names)
 for name, result in zip(names, results):
     print(f"{name}: {result}")
 ```
+
 
 ## Development
 
