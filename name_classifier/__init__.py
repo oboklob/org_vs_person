@@ -1,5 +1,13 @@
 """Name classifier package for distinguishing between person and organization names."""
-from name_classifier.classifier import NameClassifier, ClassificationResult
+from name_classifier.classifier import (
+    NameClassifier,
+    ClassificationResult,
+    classify,
+    classify_list,
+    classify_with_confidence,
+    classify_list_with_confidence,
+    filter_by_confidence,
+)
 from name_classifier.normalization import normalize, NormalizedText
 from name_classifier.iso20275_matcher import ISO20275Matcher, SuffixMatch, FormMetadata
 from name_classifier.fast_org_detector import (
@@ -14,6 +22,11 @@ __version__ = "0.1.0"
 __all__ = [
     "NameClassifier",
     "ClassificationResult",
+    "classify",
+    "classify_list",
+    "classify_with_confidence",
+    "classify_list_with_confidence",
+    "filter_by_confidence",
     "normalize",
     "NormalizedText",
     "ISO20275Matcher",

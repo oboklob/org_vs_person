@@ -46,6 +46,7 @@ def create_vectorizer_from_config(config: dict):
     analyzer = config.get("analyzer", "char")
     ngram_range = tuple(config.get("ngram_range", [2, 4]))
     max_features = config.get("max_features", 10000)
+    n_features = config.get("n_features", 2**18)  # For HashingVectorizer
     
     if vectorizer_type == "TfidfVectorizer":
         return TfidfVectorizer(
@@ -58,6 +59,13 @@ def create_vectorizer_from_config(config: dict):
             analyzer=analyzer,
             ngram_range=ngram_range,
             max_features=max_features
+        )
+    elif vectorizer_type == "HashingVectorizer":
+        return HashingVectorizer(
+            analyzer=analyzer,
+            ngram_range=ngram_range,
+            n_features=n_features,
+            alternate_sign=False  # Non-negative for MultinomialNB compatibility
         )
     else:
         raise ValueError(f"Unsupported vectorizer type: {vectorizer_type}")
@@ -107,48 +115,79 @@ def extract_config_from_result(best_result: dict, vectorizers: dict, classifiers
         "type": vectorizer.__class__.__name__,
         "analyzer": vectorizer.analyzer,
         "ngram_range": list(vectorizer.ngram_range),
-        "max_features": vectorizer.max_features
     }
     
-    # Get model config
-    classifier = classifiers[clf_name]
-    model_config = {
-        "type": clf_name,
-        "params": {}
-    }
+    # HashingVectorizer uses n_features, others use max_features
+    if hasattr(vectorizer, 'n_features'):
+        vec_config["n_features"] = vectorizer.n_features
+    elif hasattr(vectorizer, 'max_features'):
+        vec_config["max_features"] = vectorizer.max_features
     
-    # Extract relevant parameters based on model type
-    if clf_name == "LogisticRegression":
-        model_config["params"] = {
-            "max_iter": classifier.max_iter,
-            "random_state": classifier.random_state,
-            "class_weight": classifier.class_weight,
-            "C": classifier.C
-        }
-    elif clf_name == "LinearSVC":
-        model_config["params"] = {
-            "max_iter": classifier.max_iter,
-            "random_state": classifier.random_state,
-            "class_weight": classifier.class_weight,
-            "C": classifier.C
-        }
-    elif clf_name == "RandomForest":
-        model_config["params"] = {
-            "n_estimators": classifier.n_estimators,
-            "random_state": classifier.random_state,
-            "class_weight": classifier.class_weight,
-            "max_depth": classifier.max_depth
-        }
-    elif clf_name == "MultinomialNB":
-        model_config["params"] = {
-            "alpha": classifier.alpha
-        }
-    
-    # If in parameter grid mode, extract the specific parameters from the result
+    # Get classifier - in parameter grid mode, we need to reconstruct it from best params
     if grid_mode == "parameter_grid" and "params" in best_result:
         import ast
         best_params = ast.literal_eval(best_result["params"])
+        
+        # Extract base model type (remove _fine, _ultra_fine suffixes)
+        base_clf_name = clf_name.replace("_fine", "").replace("_ultra_fine", "")
+        
+        model_config = {
+            "type": base_clf_name,
+            "params": {}
+        }
+        
+        # Get base parameters and merge with best params
+        if base_clf_name == "LogisticRegression":
+            model_config["params"] = {
+                "max_iter": 1000,
+                "random_state": 42,
+                "class_weight": "balanced",
+            }
+        elif base_clf_name == "LinearSVC":
+            model_config["params"] = {
+                "max_iter": 2000,
+                "random_state": 42,
+                "class_weight": "balanced",
+            }
+        elif base_clf_name == "MultinomialNB":
+            model_config["params"] = {}
+        
+        # Update with best params from grid search
         model_config["params"].update(best_params)
+    else:
+        # Normal mode - extract from classifier instance
+        classifier = classifiers[clf_name]
+        model_config = {
+            "type": clf_name,
+            "params": {}
+        }
+        
+        # Extract relevant parameters based on model type
+        if clf_name == "LogisticRegression":
+            model_config["params"] = {
+                "max_iter": classifier.max_iter,
+                "random_state": classifier.random_state,
+                "class_weight": classifier.class_weight,
+                "C": classifier.C
+            }
+        elif clf_name == "LinearSVC":
+            model_config["params"] = {
+                "max_iter": classifier.max_iter,
+                "random_state": classifier.random_state,
+                "class_weight": classifier.class_weight,
+                "C": classifier.C
+            }
+        elif clf_name == "RandomForest":
+            model_config["params"] = {
+                "n_estimators": classifier.n_estimators,
+                "random_state": classifier.random_state,
+                "class_weight": classifier.class_weight,
+                "max_depth": classifier.max_depth
+            }
+        elif clf_name == "MultinomialNB":
+            model_config["params"] = {
+                "alpha": classifier.alpha
+            }
     
     return {
         "vectorizer": vec_config,
@@ -272,6 +311,24 @@ def get_model_param_grids(n_jobs=-1):
             {
                 "model": [LinearSVC(max_iter=2000, random_state=42, class_weight="balanced")],
                 "params": {"C": [0.01, 0.1, 1.0, 10.0]},
+            }
+        ],
+        "LinearSVC_fine": [
+            {
+                "model": [LinearSVC(max_iter=2000, random_state=42, class_weight="balanced")],
+                "params": {
+                    "C": [0.05, 0.075, 0.1, 0.125, 0.15, 0.2, 0.25, 0.5],
+                    "loss": ["hinge", "squared_hinge"],
+                },
+            }
+        ],
+        "LinearSVC_ultra_fine": [
+            {
+                "model": [LinearSVC(max_iter=2000, random_state=42, class_weight="balanced")],
+                "params": {
+                    "C": [0.2, 0.225, 0.25, 0.275, 0.3, 0.35],
+                    "loss": ["squared_hinge"],
+                },
             }
         ],
 
@@ -519,11 +576,20 @@ def main():
             )
 
         # Validate fixed model if specified
-        if has_fixed_model and args.fix_model not in all_classifiers:
-            raise ValueError(
-                f"Invalid model '{args.fix_model}'. "
-                f"Available: {', '.join(all_classifiers.keys())}"
-            )
+        if has_fixed_model:
+            # In parameter grid mode, check against param_grids instead of classifiers
+            if grid_mode == "parameter_grid":
+                param_grids = get_model_param_grids(n_jobs=args.n_jobs)
+                if args.fix_model not in param_grids:
+                    raise ValueError(
+                        f"Invalid model '{args.fix_model}'. "
+                        f"Available for parameter grid: {', '.join(param_grids.keys())}"
+                    )
+            elif args.fix_model not in all_classifiers:
+                raise ValueError(
+                    f"Invalid model '{args.fix_model}'. "
+                    f"Available: {', '.join(all_classifiers.keys())}"
+                )
 
         # Validate excluded models
         for model in excluded_models:
@@ -539,10 +605,15 @@ def main():
         else:
             vectorizers = all_vectorizers
 
-        if has_fixed_model:
-            classifiers = {args.fix_model: all_classifiers[args.fix_model]}
+        # Only filter classifiers if not in parameter_grid mode (where we use param_grids instead)
+        if grid_mode != "parameter_grid":
+            if has_fixed_model:
+                classifiers = {args.fix_model: all_classifiers[args.fix_model]}
+            else:
+                classifiers = {k: v for k, v in all_classifiers.items() if k not in excluded_models}
         else:
-            classifiers = {k: v for k, v in all_classifiers.items() if k not in excluded_models}
+            # In parameter grid mode, we don't use the classifiers dict
+            classifiers = {}
 
         # Results storage
         results = []

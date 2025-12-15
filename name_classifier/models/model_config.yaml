@@ -1,22 +1,23 @@
 fast_train:
   vectorizer:
-    type: CountVectorizer
+    type: HashingVectorizer
     analyzer: char
     ngram_range:
-    - 2
-    - 4
-    max_features: 10000
+    - 3
+    - 5
+    n_features: 262144
   model:
-    type: RandomForest
+    type: LinearSVC
     params:
-      n_estimators: 200
+      max_iter: 2000
       random_state: 42
       class_weight: balanced
-      max_depth: null
+      C: 0.25
+      loss: squared_hinge
   accuracy:
-    test_accuracy: 0.9235
-    test_f1: 0.9231786560076759
-    cv_mean: 0.9192650001364905
-    cv_std: 0.00013426821882983795
-  last_updated: '2025-12-11T19:36:43.492275'
-  training_date: '2025-12-11T19:36:43.492282'
+    test_accuracy: 0.946305
+    test_f1: 0.9462620541153411
+    cv_mean: 0.9448125000136702
+    cv_std: 9.416719484555337e-05
+  last_updated: '2025-12-13T12:09:09.613451'
+  training_date: '2025-12-13T12:09:09.613463'

@@ -313,6 +313,139 @@ class NameClassifier:
             results.append(result)
         
         return results
+    
+    def classify_with_confidence(
+        self,
+        name: str,
+        min_confidence: float = 0.7
+    ) -> Tuple[str, float]:
+        """Classify a name with confidence threshold.
+        
+        Returns "UNCERTAIN" if the model's confidence is below the threshold.
+        Confidence is calculated as abs(p_org - 0.5) * 2, which converts the
+        probability (0-1) to a confidence scale where 0.5 probability = 0 confidence
+        and 0.0/1.0 probability = 1.0 confidence.
+        
+        Args:
+            name: The name to classify
+            min_confidence: Minimum confidence threshold (0.0-1.0). Default 0.7
+        
+        Returns:
+            Tuple of (label, confidence) where label is "PER", "ORG", or "UNCERTAIN"
+            and confidence is a float 0.0-1.0
+        
+        Raises:
+            ValueError: If name is None or empty, or min_confidence is out of range
+        
+        Example:
+            >>> classifier.classify_with_confidence("Bob Smith", min_confidence=0.8)
+            ('PER', 0.95)
+            >>> classifier.classify_with_confidence("Jordan", min_confidence=0.8)
+            ('UNCERTAIN', 0.45)
+        """
+        # Validate min_confidence
+        if not 0.0 <= min_confidence <= 1.0:
+            raise ValueError("min_confidence must be between 0.0 and 1.0")
+        
+        # Get classification with diagnostics
+        result = self.classify_with_diagnostics(name)
+        
+        # Calculate confidence: distance from 0.5 normalized to 0-1
+        confidence = abs(result.p_org - 0.5) * 2
+        
+        # Check if confidence meets threshold
+        if confidence < min_confidence:
+            return ("UNCERTAIN", confidence)
+        
+        return (result.label, confidence)
+    
+    def classify_list_with_confidence(
+        self,
+        names: List[str],
+        min_confidence: float = 0.7
+    ) -> List[Tuple[str, float]]:
+        """Classify a list of names with confidence thresholds.
+        
+        Returns "UNCERTAIN" for names where the model's confidence is below the threshold.
+        
+        Args:
+            names: List of names to classify
+            min_confidence: Minimum confidence threshold (0.0-1.0). Default 0.7
+        
+        Returns:
+            List of (label, confidence) tuples where label is "PER", "ORG", or "UNCERTAIN"
+        
+        Raises:
+            ValueError: If names is invalid or min_confidence is out of range
+        
+        Example:
+            >>> classifier.classify_list_with_confidence(['Bob Smith', 'Google Inc.'])
+            [('PER', 0.95), ('ORG', 0.88)]
+        """
+        # Validate min_confidence
+        if not 0.0 <= min_confidence <= 1.0:
+            raise ValueError("min_confidence must be between 0.0 and 1.0")
+        
+        # Get all classifications with diagnostics (batch)
+        results = self.classify_list_with_diagnostics(names)
+        
+        # Convert to confidence format
+        output = []
+        for result in results:
+            confidence = abs(result.p_org - 0.5) * 2
+            if confidence < min_confidence:
+                output.append(("UNCERTAIN", confidence))
+            else:
+                output.append((result.label, confidence))
+        
+        return output
+    
+    def filter_by_confidence(
+        self,
+        names: List[str],
+        target_label: str,
+        min_confidence: float = 0.7
+    ) -> List[Tuple[str, float]]:
+        """Filter names to only those matching target label with sufficient confidence.
+        
+        This is useful when you want to extract only names that the model is confident
+        about for a specific class (e.g., "give me all names that are definitely persons").
+        
+        Args:
+            names: List of names to classify and filter
+            target_label: The label to filter for ("PER" or "ORG")
+            min_confidence: Minimum confidence threshold (0.0-1.0). Default 0.7
+        
+        Returns:
+            List of (name, confidence) tuples for names matching target_label
+            with confidence >= min_confidence
+        
+        Raises:
+            ValueError: If target_label is invalid or min_confidence is out of range
+        
+        Example:
+            >>> names = ['Bob Smith', 'Google Inc.', 'Jane Doe', 'Apple Inc']
+            >>> classifier.filter_by_confidence(names, "PER", min_confidence=0.8)
+            [('Bob Smith', 0.95), ('Jane Doe', 0.92)]
+        """
+        # Validate target_label
+        if target_label not in ["PER", "ORG"]:
+            raise ValueError("target_label must be 'PER' or 'ORG'")
+        
+        # Validate min_confidence
+        if not 0.0 <= min_confidence <= 1.0:
+            raise ValueError("min_confidence must be between 0.0 and 1.0")
+        
+        # Get all classifications with confidence
+        classifications = self.classify_list_with_confidence(names, min_confidence)
+        
+        # Filter to target label (excluding UNCERTAIN)
+        filtered = []
+        for name, (label, confidence) in zip(names, classifications):
+            if label == target_label:
+                filtered.append((name, confidence))
+        
+        return filtered
 
 
 # Singleton instance for convenience
@@ -367,3 +500,92 @@ def classify_list(names: list) -> list:
         _default_classifier = NameClassifier()
 
     return _default_classifier.classify_list(names)
+
+
+def classify_with_confidence(name: str, min_confidence: float = 0.7) -> Tuple[str, float]:
+    """
+    Classify a name with confidence threshold.
+
+    This is a convenience function that uses a singleton NameClassifier instance.
+    Returns "UNCERTAIN" if the model's confidence is below the threshold.
+
+    Args:
+        name: The name to classify
+        min_confidence: Minimum confidence threshold (0.0-1.0). Default 0.7
+
+    Returns:
+        Tuple of (label, confidence) where label is "PER", "ORG", or "UNCERTAIN"
+
+    Example:
+        >>> classify_with_confidence("Bob Smith", min_confidence=0.8)
+        ('PER', 0.95)
+        >>> classify_with_confidence("Jordan", min_confidence=0.8)
+        ('UNCERTAIN', 0.45)
+    """
+    global _default_classifier
+
+    if _default_classifier is None:
+        _default_classifier = NameClassifier()
+
+    return _default_classifier.classify_with_confidence(name, min_confidence)
+
+
+def classify_list_with_confidence(
+    names: List[str],
+    min_confidence: float = 0.7
+) -> List[Tuple[str, float]]:
+    """
+    Classify a list of names with confidence thresholds.
+
+    This is a convenience function that uses a singleton NameClassifier instance.
+    Returns "UNCERTAIN" for names where confidence is below the threshold.
+
+    Args:
+        names: List of names to classify
+        min_confidence: Minimum confidence threshold (0.0-1.0). Default 0.7
+
+    Returns:
+        List of (label, confidence) tuples where label is "PER", "ORG", or "UNCERTAIN"
+
+    Example:
+        >>> classify_list_with_confidence(['Bob Smith', 'Google Inc.'])
+        [('PER', 0.95), ('ORG', 0.88)]
+    """
+    global _default_classifier
+
+    if _default_classifier is None:
+        _default_classifier = NameClassifier()
+
+    return _default_classifier.classify_list_with_confidence(names, min_confidence)
+
+
+def filter_by_confidence(
+    names: List[str],
+    target_label: str,
+    min_confidence: float = 0.7
+) -> List[Tuple[str, float]]:
+    """
+    Filter names to only those matching target label with sufficient confidence.
+
+    This is a convenience function that uses a singleton NameClassifier instance.
+    Useful for extracting only names the model is confident about.
+
+    Args:
+        names: List of names to classify and filter
+        target_label: The label to filter for ("PER" or "ORG")
+        min_confidence: Minimum confidence threshold (0.0-1.0). Default 0.7
+
+    Returns:
+        List of (name, confidence) tuples for names matching target_label
+
+    Example:
+        >>> names = ['Bob Smith', 'Google Inc.', 'Jane Doe', 'Apple Inc']
+        >>> filter_by_confidence(names, "PER", min_confidence=0.8)
+        [('Bob Smith', 0.95), ('Jane Doe', 0.92)]
+    """
+    global _default_classifier
+
+    if _default_classifier is None:
+        _default_classifier = NameClassifier()
+
+    return _default_classifier.filter_by_confidence(names, target_label, min_confidence)

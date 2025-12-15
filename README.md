@@ -28,6 +28,38 @@ results = classify_list(['Bob Smith', 'Google Inc.', 'ministry of defense'])
 print(results)  # Output: ['PER', 'ORG', 'ORG']
 ```
 
+## Confidence-Based Classification
+
+For cases where you need to know **how confident** the model is, or want to handle uncertain classifications explicitly:
+
+```python
+from name_classifier import classify_with_confidence, filter_by_confidence
+
+# Get classification with confidence score
+label, confidence = classify_with_confidence("Bob Smith", min_confidence=0.8)
+if label == "UNCERTAIN":
+    print(f"Not confident enough (confidence: {confidence:.2%})")
+else:
+    print(f"Classified as {label} with {confidence:.2%} confidence")
+
+# Filter a list to get only names you're confident about
+names = ['Bob Smith', 'Google Inc.', 'Jane Doe', 'Apple Inc', 'Jordan']
+certain_persons = filter_by_confidence(names, "PER", min_confidence=0.85)
+print("Confident persons:")
+for name, conf in certain_persons:
+    print(f"  {name}: {conf:.2%} confident")
+
+# Output:
+# Confident persons:
+#   Bob Smith: 100.00% confident
+#   Jane Doe: 100.00% confident
+```
+
+**When to use confidence-based classification:**
+- **Data quality**: Filter names to include only high-confidence classifications
+- **Uncertainty handling**: Identify ambiguous names that need manual review
+- **Threshold control**: Adjust `min_confidence` based on your precision/recall needs
+
 ## Advanced Usage
 
 ```python
