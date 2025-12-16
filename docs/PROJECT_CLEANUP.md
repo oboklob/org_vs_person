@@ -1,5 +1,8 @@
 # Project Cleanup Complete
 
+> [!NOTE]
+> **HISTORICAL RECORD** - Documents the cleanup performed on December 12, 2025 after archiving the engineered features experiment. Preserved for project history reference.
+
 ## Summary
 
 Successfully cleaned up the name_classifier project after the failed engineered features experiment.

@@ -1,5 +1,9 @@
 # Training Script Changes Summary
 
+> [!NOTE]
+> **HISTORICAL RECORD** - Documents changes made to `train_model.py` in December 2025.
+> The changes described here (RandomForest removal, HashingVectorizer addition) are reflected in the current code.
+
 ## Changes Made to `scripts/train_model.py`
 
 ### ✅ Removed RandomForest (4 locations)

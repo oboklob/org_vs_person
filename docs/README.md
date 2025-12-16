@@ -25,8 +25,29 @@ Comprehensive post-mortem of the engineered features experiment (December 2025).
 
 **Stats**: 2,650 lines of code, 129 tests, 0.888 accuracy (worse than 0.91+ baseline)
 
+### [FAST_ORG_DETECTION.md](./FAST_ORG_DETECTION.md) 🚀 **Fast Filter**
+Documentation for FastOrgDetector - high-precision organization detection using legal forms.
+
+**Performance**: 99.35-99.97% precision for ORG detection (lower recall)
+
+### [FILTER_ACCURACY_ANALYSIS.md](./FILTER_ACCURACY_ANALYSIS.md) 📊 **Filter Accuracy**
+Detailed accuracy analysis of the ISO20275 filter vs ML classifier.
+
+**Key Finding**: Filter achieves 99%+ precision but only 28-54% recall vs classifier's 96% precision and 92% recall.
+
+### [FILTER_PERFORMANCE_ANALYSIS.md](./FILTER_PERFORMANCE_ANALYSIS.md) ⚡ **Filter Performance**
+Performance benchmark showing filter is slower than ML for batch processing.
+
+**Recommendation**: Use ML classifier for speed, filter for high-precision use cases.
+
 ### [CLASS_IMBALANCE.md](./CLASS_IMBALANCE.md) 📈 **Training Data**
 Analysis of class distribution in training data and handling strategies.
+
+### [PROJECT_CLEANUP.md](./PROJECT_CLEANUP.md) 🧹 **Historical**
+Record of cleanup performed after engineered features experiment (December 2025).
+
+### [TRAINING_SCRIPT_CLEANUP.md](./TRAINING_SCRIPT_CLEANUP.md) 🔧 **Historical**
+Documents changes to `train_model.py` (RandomForest removal, HashingVectorizer addition).
 
 ---
 
@@ -37,6 +58,12 @@ Analysis of class distribution in training data and handling strategies.
 
 **Need full technical details for a report/presentation?**  
 → Read [ENGINEERED_FEATURES_POSTMORTEM.md](./ENGINEERED_FEATURES_POSTMORTEM.md)
+
+**Want high-precision organization detection?**  
+→ Read [FAST_ORG_DETECTION.md](./FAST_ORG_DETECTION.md) and [FILTER_ACCURACY_ANALYSIS.md](./FILTER_ACCURACY_ANALYSIS.md)
+
+**Want to understand filter performance trade-offs?**  
+→ Read [FILTER_PERFORMANCE_ANALYSIS.md](./FILTER_PERFORMANCE_ANALYSIS.md)
 
 **Want to improve the classifier?**  
 → Read [LESSONS_LEARNED.md](./LESSONS_LEARNED.md) "Recommendations Going Forward"
@@ -80,7 +107,12 @@ See [LESSONS_LEARNED.md](./LESSONS_LEARNED.md) for alternatives if you need to i
 | 2025-12-11 | CLASS_IMBALANCE.md | Training data analysis |
 | 2025-12-12 | ENGINEERED_FEATURES_POSTMORTEM.md | Full experiment documentation |
 | 2025-12-12 | LESSONS_LEARNED.md | Quick-reference summary |
-| 2025-12-12 | README.md | This file |
+| 2025-12-12 | PROJECT_CLEANUP.md | Cleanup record (historical) |
+| 2025-12-12 | TRAINING_SCRIPT_CLEANUP.md | Training script changes (historical) |
+| 2025-12-12 | FAST_ORG_DETECTION.md | Fast filter documentation |
+| 2025-12-15 | FILTER_ACCURACY_ANALYSIS.md | Filter accuracy benchmarks |
+| 2025-12-15 | FILTER_PERFORMANCE_ANALYSIS.md | Filter performance benchmarks |
+| 2025-12-15 | README.md | This file (updated) |
 
 ---
 

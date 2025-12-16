@@ -1,12 +1,18 @@
 # Lessons Learned: Why Simple N-grams Beat Engineered Features
 
+> [!NOTE]
+> **HISTORICAL LESSONS** - This documents key takeaways from a failed experiment (December 2025).
+> These lessons inform our **current** simple approach but the engineered features system itself is archived.
+> 
+> **Current System**: Simple n-gram classifier. See [README.md](file:///sites/name_classifier/README.md) for usage.
+
 ## TL;DR
 
 We spent significant effort adding engineered features (ISO 20275 legal forms, string patterns, lexical signals) to improve name classification. **Result**: Accuracy dropped from 0.91+ to 0.888.
 
 **Why**: Character n-grams already capture everything engineered features provide. Adding explicit features was redundant.
 
-**Recommendation**: Stick with simple TfidfVectorizer + LogisticRegression baseline.
+**Recommendation**: Stick with simple TfidfVectorizer + LogisticRegression baseline (already implemented).
 
 ---
 

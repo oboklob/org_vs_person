@@ -1,5 +1,12 @@
 # Engineered Features Experiment - Post-Mortem
 
+> [!IMPORTANT]
+> **HISTORICAL DOCUMENT** - This documents a failed experiment conducted in December 2025.
+> The engineered features approach described here was **NOT adopted** and is preserved  for reference only.
+> 
+> **Current System**: Uses simple TfidfVectorizer + LogisticRegression (0.91+ accuracy).
+> See main [README.md](file:///sites/name_classifier/README.md) for current approach.
+
 **Date**: December 12, 2025  
 **Objective**: Improve name classification accuracy by adding engineered features alongside character n-grams  
 **Outcome**: ❌ Failed - No improvement over baseline, added unnecessary complexity  
