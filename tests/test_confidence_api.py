@@ -134,25 +134,35 @@ class TestClassifyWithConfidence:
 class TestClassifyListWithConfidence:
     """Tests for classify_list_with_confidence method."""
 
+    @patch("name_classifier.iso20275_matcher.ISO20275Matcher")
     @patch("name_classifier.classifier.joblib.load")
     @patch("pathlib.Path.exists")
-    def test_batch_classification(self, mock_exists, mock_load):
+    def test_batch_classification(self, mock_exists, mock_load, mock_iso_class):
         """Test batch classification with mixed confidence levels."""
         mock_exists.return_value = True
 
+        # Mock ISO matcher to return None (no legal form match)
+        mock_iso = Mock()
+        mock_iso.match_legal_form.return_value = None
+        mock_iso_class.return_value = mock_iso
+
         # Mock model with various confidence levels
+        # classify_list_with_diagnostics calls predict individually for each name
         mock_model = Mock()
-        mock_model.predict.return_value = np.array(["PER", "ORG", "PER"])
-        # High conf PER (0.95), High conf ORG (0.05), Near uncertain (0.55)
-        mock_model.predict_proba.return_value = np.array([
-            [0.95, 0.05],  # High confidence PER
-            [0.05, 0.95],  # High confidence ORG
-            [0.45, 0.55],  # Low confidence (uncertain)
-        ])
+        mock_model.predict.side_effect = [
+            np.array(["PER"]),  # First call for "Bob Smith"
+            np.array(["ORG"]),  # Second call for "Microsoft Corp"
+            np.array(["PER"]),  # Third call for "Jordan"
+        ]
+        mock_model.predict_proba.side_effect = [
+            np.array([[0.95, 0.05]]),  # High confidence PER
+            np.array([[0.05, 0.95]]),  # High confidence ORG
+            np.array([[0.45, 0.55]]),  # Low confidence (uncertain)
+        ]
         mock_model.classes_ = np.array(["PER", "ORG"])
 
         mock_vectorizer = Mock()
-        mock_vectorizer.transform.return_value = [[0.1], [0.2], [0.3]]
+        mock_vectorizer.transform.side_effect = [[[0.1]], [[0.2]], [[0.3]]]
 
         mock_load.side_effect = [mock_model, mock_vectorizer]
 
@@ -181,25 +191,37 @@ class TestClassifyListWithConfidence:
 class TestFilterByConfidence:
     """Tests for filter_by_confidence method."""
 
+    @patch("name_classifier.iso20275_matcher.ISO20275Matcher")
     @patch("name_classifier.classifier.joblib.load")
     @patch("pathlib.Path.exists")
-    def test_filter_persons(self, mock_exists, mock_load):
+    def test_filter_persons(self, mock_exists, mock_load, mock_iso_class):
         """Test filtering to get only confident persons."""
         mock_exists.return_value = True
 
+        # Mock ISO matcher to return None (no legal form match)
+        mock_iso = Mock()
+        mock_iso.match_legal_form.return_value = None
+        mock_iso_class.return_value = mock_iso
+
         mock_model = Mock()
-        mock_model.predict.return_value = np.array(["PER", "ORG", "PER", "ORG"])
+        # Individual calls for each name
+        mock_model.predict.side_effect = [
+            np.array(["PER"]),  # Bob Smith
+            np.array(["ORG"]),  # Microsoft Corp
+            np.array(["PER"]),  # Jordan
+            np.array(["ORG"]),  # Apple Inc
+        ]
         # Mix of high and low confidence
-        mock_model.predict_proba.return_value = np.array([
-            [0.95, 0.05],  # High conf PER - should pass
-            [0.05, 0.95],  # High conf ORG - filtered out
-            [0.55, 0.45],  # Low conf PER - should fail threshold
-            [0.20, 0.80],  # High conf ORG - filtered out
-        ])
+        mock_model.predict_proba.side_effect = [
+            np.array([[0.95, 0.05]]),  # High conf PER - should pass
+            np.array([[0.05, 0.95]]),  # High conf ORG - filtered out
+            np.array([[0.55, 0.45]]),  # Low conf PER - should fail threshold
+            np.array([[0.20, 0.80]]),  # High conf ORG - filtered out
+        ]
         mock_model.classes_ = np.array(["PER", "ORG"])
 
         mock_vectorizer = Mock()
-        mock_vectorizer.transform.return_value = [[0.1], [0.2], [0.3], [0.4]]
+        mock_vectorizer.transform.side_effect = [[[0.1]], [[0.2]], [[0.3]], [[0.4]]]
 
         mock_load.side_effect = [mock_model, mock_vectorizer]
 
@@ -212,24 +234,36 @@ class TestFilterByConfidence:
         assert results[0][0] == "Bob Smith"
         assert results[0][1] > 0.7
 
+    @patch("name_classifier.iso20275_matcher.ISO20275Matcher")
     @patch("name_classifier.classifier.joblib.load")
     @patch("pathlib.Path.exists")
-    def test_filter_organizations(self, mock_exists, mock_load):
+    def test_filter_organizations(self, mock_exists, mock_load, mock_iso_class):
         """Test filtering to get only confident organizations."""
         mock_exists.return_value = True
 
+        # Mock ISO matcher to return None (no legal form match)
+        mock_iso = Mock()
+        mock_iso.match_legal_form.return_value = None
+        mock_iso_class.return_value = mock_iso
+
         mock_model = Mock()
-        mock_model.predict.return_value = np.array(["PER", "ORG", "PER", "ORG"])
-        mock_model.predict_proba.return_value = np.array([
-            [0.95, 0.05],  # High conf PER - filtered out
-            [0.05, 0.95],  # High conf ORG - should pass
-            [0.55, 0.45],  # Low conf PER - filtered out
-            [0.20, 0.80],  # High conf ORG - should pass
-        ])
+        # Individual calls for each name
+        mock_model.predict.side_effect = [
+            np.array(["PER"]),  # Bob Smith
+            np.array(["ORG"]),  # Microsoft Corp
+            np.array(["PER"]),  # Jordan
+            np.array(["ORG"]),  # Apple Inc
+        ]
+        mock_model.predict_proba.side_effect = [
+            np.array([[0.95, 0.05]]),  # High conf PER - filtered out
+            np.array([[0.05, 0.95]]),  # High conf ORG - should pass (conf = 0.9)
+            np.array([[0.55, 0.45]]),  # Low conf PER - filtered out
+            np.array([[0.15, 0.85]]),  # High conf ORG - should pass (conf = 0.7)
+        ]
         mock_model.classes_ = np.array(["PER", "ORG"])
 
         mock_vectorizer = Mock()
-        mock_vectorizer.transform.return_value = [[0.1], [0.2], [0.3], [0.4]]
+        mock_vectorizer.transform.side_effect = [[[0.1]], [[0.2]], [[0.3]], [[0.4]]]
 
         mock_load.side_effect = [mock_model, mock_vectorizer]
 
@@ -310,19 +344,32 @@ class TestConvenienceFunctions:
         assert label == "PER"
         assert confidence > 0.7
 
+    @patch("name_classifier.iso20275_matcher.ISO20275Matcher")
     @patch("name_classifier.classifier.joblib.load")
     @patch("pathlib.Path.exists")
-    def test_classify_list_with_confidence_function(self, mock_exists, mock_load):
+    def test_classify_list_with_confidence_function(self, mock_exists, mock_load, mock_iso_class):
         """Test classify_list_with_confidence convenience function."""
         mock_exists.return_value = True
 
+        # Mock ISO matcher to return None (no legal form match)
+        mock_iso = Mock()
+        mock_iso.match_legal_form.return_value = None
+        mock_iso_class.return_value = mock_iso
+
         mock_model = Mock()
-        mock_model.predict.return_value = np.array(["PER", "ORG"])
-        mock_model.predict_proba.return_value = np.array([[0.95, 0.05], [0.05, 0.95]])
+        # Individual calls for each name
+        mock_model.predict.side_effect = [
+            np.array(["PER"]),
+            np.array(["ORG"]),
+        ]
+        mock_model.predict_proba.side_effect = [
+            np.array([[0.95, 0.05]]),
+            np.array([[0.05, 0.95]]),
+        ]
         mock_model.classes_ = np.array(["PER", "ORG"])
 
         mock_vectorizer = Mock()
-        mock_vectorizer.transform.return_value = [[0.1], [0.2]]
+        mock_vectorizer.transform.side_effect = [[[0.1]], [[0.2]]]
 
         mock_load.side_effect = [mock_model, mock_vectorizer]
 
@@ -335,19 +382,32 @@ class TestConvenienceFunctions:
         assert results[0][0] == "PER"
         assert results[1][0] == "ORG"
 
+    @patch("name_classifier.iso20275_matcher.ISO20275Matcher")
     @patch("name_classifier.classifier.joblib.load")
     @patch("pathlib.Path.exists")
-    def test_filter_by_confidence_function(self, mock_exists, mock_load):
+    def test_filter_by_confidence_function(self, mock_exists, mock_load, mock_iso_class):
         """Test filter_by_confidence convenience function."""
         mock_exists.return_value = True
 
+        # Mock ISO matcher to return None (no legal form match)
+        mock_iso = Mock()
+        mock_iso.match_legal_form.return_value = None
+        mock_iso_class.return_value = mock_iso
+
         mock_model = Mock()
-        mock_model.predict.return_value = np.array(["PER", "ORG"])
-        mock_model.predict_proba.return_value = np.array([[0.95, 0.05], [0.05, 0.95]])
+        # Individual calls for each name
+        mock_model.predict.side_effect = [
+            np.array(["PER"]),
+            np.array(["ORG"]),
+        ]
+        mock_model.predict_proba.side_effect = [
+            np.array([[0.95, 0.05]]),
+            np.array([[0.05, 0.95]]),
+        ]
         mock_model.classes_ = np.array(["PER", "ORG"])
 
         mock_vectorizer = Mock()
-        mock_vectorizer.transform.return_value = [[0.1], [0.2]]
+        mock_vectorizer.transform.side_effect = [[[0.1]], [[0.2]]]
 
         mock_load.side_effect = [mock_model, mock_vectorizer]
 
