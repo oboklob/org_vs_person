@@ -285,37 +285,6 @@ class NameClassifier:
             "shortcut_applied": False
         }
         
-        # Add top features if model has coefficients
-        if hasattr(self._model, 'coef_'):
-            try:
-                # Get feature importances
-                coef = self._model.coef_[0] if len(self._model.coef_.shape) > 1 else self._model.coef_
-                
-                # Get engineered feature names (last 32 features)
-                from name_classifier.feature_engineering import get_feature_names
-                feature_names = get_feature_names()
-                
-                # Get the engineered feature values
-                X_dense = X.toarray() if hasattr(X, 'toarray') else X
-                eng_features = X_dense[0, -32:]  # Last 32 are engineered
-                eng_coef = coef[-32:]  # Last 32 coefficients
-                
-                # Calculate contribution scores
-                contributions = eng_features * eng_coef
-                
-                # Get top 5 absolute contributions
-                top_indices = np.argsort(np.abs(contributions))[-5:][::-1]
-                top_features = [
-                    (feature_names[i], float(eng_features[i]), float(contributions[i]))
-                    for i in top_indices
-                    if eng_features[i] != 0  # Only non-zero features
-                ]
-                
-                reason_codes["top_features"] = top_features[:5]
-            except Exception as e:
-                # If feature extraction fails, don't include it
-                reason_codes["top_features_error"] = str(e)
-        
         return ClassificationResult(
             label=prediction,
             p_org=p_org,
