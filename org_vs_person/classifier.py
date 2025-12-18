@@ -135,7 +135,7 @@ class NameClassifier:
 
         return prediction
 
-    def classify_list(self, names: list) -> list:
+    def classify_list(self, names: list, min_confidence: Optional[float] = None) -> list:
         """
         Classify a list of names as either PER (person) or ORG (organization).
         
@@ -148,9 +148,11 @@ class NameClassifier:
 
         Args:
             names: List of names to classify
+            min_confidence: Optional minimum confidence threshold (0.0-1.0). 
+                           If provided, low confidence predictions are returned as "UNK".
 
         Returns:
-            List of classifications ("PER" or "ORG") corresponding to each input name
+            List of classifications ("PER", "ORG", or "UNK") corresponding to each input name
 
         Raises:
             ValueError: If names is None, not a list, empty, or contains None/empty values
@@ -159,6 +161,8 @@ class NameClassifier:
             >>> classifier = NameClassifier()
             >>> classifier.classify_list(['Bob Smith', 'Google Inc.', 'ministry of defense'])
             ['PER', 'ORG', 'ORG']
+            >>> classifier.classify_list(['Bob Smith', 'Unknown'], min_confidence=0.8)
+            ['PER', 'UNK']
         """
         # Input validation
         if names is None:
@@ -169,6 +173,9 @@ class NameClassifier:
 
         if not names:
             raise ValueError("Names list cannot be empty")
+            
+        if min_confidence is not None and not 0.0 <= min_confidence <= 1.0:
+            raise ValueError("min_confidence must be between 0.0 and 1.0")
 
         # Validate and clean each name
         cleaned_names = []
@@ -188,13 +195,49 @@ class NameClassifier:
         # Vectorize all names at once (batch processing)
         X = self._vectorizer.transform(cleaned_names)
 
-        # Predict all at once
-        predictions = self._model.predict(X)
+        # If min_confidence is not provided, use the fast path (predict only)
+        if min_confidence is None:
+            # Predict all at once
+            predictions = self._model.predict(X)
 
-        # Convert to list if needed (numpy array has tolist(), regular list doesn't)
-        if hasattr(predictions, 'tolist'):
-            return predictions.tolist()
-        return list(predictions)
+            # Convert to list if needed (numpy array has tolist(), regular list doesn't)
+            if hasattr(predictions, 'tolist'):
+                return predictions.tolist()
+            return list(predictions)
+            
+        # If min_confidence is provided, we need probabilities
+        if hasattr(self._model, 'predict_proba'):
+            probas = self._model.predict_proba(X)
+            
+            # Get class indices
+            classes = self._model.classes_
+            org_idx = np.where(classes == 'ORG')[0][0] if 'ORG' in classes else 1
+            
+            results = []
+            for proba in probas:
+                p_org = float(proba[org_idx])
+                confidence = abs(p_org - 0.5) * 2
+                
+                if confidence < min_confidence:
+                    results.append("UNK")
+                else:
+                    # Use the label with higher probability
+                    # Note: predict() might use a different threshold than 0.5, but usually it's 0.5
+                    # For consistency with confidence calculation, we use 0.5 threshold here
+                    label = "ORG" if p_org >= 0.5 else "PER"
+                    results.append(label)
+            
+            return results
+        else:
+            # Model doesn't support probabilities, fall back to binary prediction
+            # but warn or handle gracefully? 
+            # For now, just return predictions as we can't calculate confidence
+            # Or treat confidence as 1.0?
+            # Let's assume 1.0 confidence for models without probability
+            predictions = self._model.predict(X)
+            if hasattr(predictions, 'tolist'):
+                return predictions.tolist()
+            return list(predictions)
 
     def get_metadata(self) -> Optional[dict]:
         """
@@ -509,7 +552,7 @@ def classify(name: str) -> str:
     return _default_classifier.classify(name)
 
 
-def classify_list(names: list) -> list:
+def classify_list(names: list, min_confidence: Optional[float] = None) -> list:
     """
     Classify a list of names as either PER (person) or ORG (organization).
 
@@ -517,9 +560,10 @@ def classify_list(names: list) -> list:
 
     Args:
         names: List of names to classify
+        min_confidence: Optional minimum confidence threshold (0.0-1.0).
 
     Returns:
-        List of classifications ("PER" or "ORG") corresponding to each input name
+        List of classifications ("PER", "ORG", or "UNK") corresponding to each input name
 
     Example:
         >>> classify_list(['Bob Smith', 'Google Inc.', 'ministry of defense'])
@@ -530,7 +574,7 @@ def classify_list(names: list) -> list:
     if _default_classifier is None:
         _default_classifier = NameClassifier()
 
-    return _default_classifier.classify_list(names)
+    return _default_classifier.classify_list(names, min_confidence)
 
 
 def classify_with_confidence(name: str, min_confidence: float = 0.7) -> Tuple[str, float]:

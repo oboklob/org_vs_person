@@ -42,6 +42,11 @@ if label == "UNCERTAIN":
 else:
     print(f"Classified as {label} with {confidence:.2%} confidence")
 
+# Classify a list with confidence threshold
+# Returns 'UNK' for uncertain predictions
+results = classify_list(['Bob Smith', 'Unknown Entity'], min_confidence=0.8)
+print(results)  # Output: ['PER', 'UNK']
+
 # Filter a list to get only names you're confident about
 names = ['Bob Smith', 'Google Inc.', 'Jane Doe', 'Apple Inc', 'Jordan']
 certain_persons = filter_by_confidence(names, "PER", min_confidence=0.85)

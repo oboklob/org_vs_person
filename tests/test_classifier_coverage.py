@@ -133,3 +133,70 @@ class TestMissingCoverageClassifier:
         
         with pytest.raises(ValueError, match="Names list cannot be empty"):
             classifier.classify_list_with_diagnostics([])
+
+    @patch("org_vs_person.classifier.joblib.load")
+    @patch("pathlib.Path.exists")
+    def test_load_model_vectorizer_missing(self, mock_exists, mock_load):
+        """Test line 58: FileNotFoundError when vectorizer is missing."""
+        # Model exists, but vectorizer does not
+        mock_exists.side_effect = [True, False]
+        
+        mock_model = Mock()
+        mock_load.return_value = mock_model
+        
+        classifier = NameClassifier()
+        
+        with pytest.raises(FileNotFoundError, match="Vectorizer file not found"):
+            classifier.classify("Test")
+
+    @patch("org_vs_person.classifier.joblib.load")
+    @patch("pathlib.Path.exists")
+    @patch("builtins.open", create=True)
+    @patch("json.load")
+    @patch("org_vs_person.classifier.sklearn")
+    def test_sklearn_version_mismatch_warning(self, mock_sklearn, mock_json_load, mock_open, mock_exists, mock_load):
+        """Test line 81: Warning when sklearn version mismatches."""
+        mock_exists.return_value = True
+        
+        mock_model = Mock()
+        mock_model.predict.return_value = np.array(["PER"])
+        mock_vectorizer = Mock()
+        mock_vectorizer.transform.return_value = [[0.1]]
+        mock_load.side_effect = [mock_model, mock_vectorizer]
+        
+        # Mock metadata with different sklearn version
+        mock_json_load.return_value = {"sklearn_version": "0.24.0"}
+        mock_sklearn.__version__ = "1.0.0"
+        
+        classifier = NameClassifier()
+        
+        with pytest.warns(UserWarning, match="Model was trained with scikit-learn"):
+            classifier.classify("Test")
+
+    def test_classify_list_invalid_min_confidence(self):
+        """Test line 178: ValueError for invalid min_confidence."""
+        classifier = NameClassifier()
+        
+        with pytest.raises(ValueError, match="min_confidence must be between 0.0 and 1.0"):
+            classifier.classify_list(["Test"], min_confidence=1.5)
+
+    @patch("org_vs_person.classifier.joblib.load")
+    @patch("pathlib.Path.exists")
+    def test_classify_list_no_predict_proba(self, mock_exists, mock_load):
+        """Test lines 237-240: classify_list with min_confidence but no predict_proba."""
+        mock_exists.return_value = True
+        
+        # Mock model WITHOUT predict_proba
+        mock_model = Mock(spec=['predict'])
+        mock_model.predict.return_value = np.array(["ORG"])
+        
+        mock_vectorizer = Mock()
+        mock_vectorizer.transform.return_value = [[0.1]]
+        mock_load.side_effect = [mock_model, mock_vectorizer]
+        
+        classifier = NameClassifier()
+        
+        # Should fall back to predict() and return predictions
+        results = classifier.classify_list(["Test"], min_confidence=0.8)
+        assert results == ["ORG"]
+
