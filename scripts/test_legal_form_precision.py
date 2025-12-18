@@ -9,7 +9,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import pandas as pd
-from name_classifier.iso20275_matcher import ISO20275Matcher
+from org_vs_person.iso20275_matcher import ISO20275Matcher
 
 def test_legal_form_detector(tier_filter=None):
     """Test legal form detection as organization predictor.

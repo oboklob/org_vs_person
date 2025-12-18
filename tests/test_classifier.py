@@ -5,7 +5,7 @@ from pathlib import Path
 from unittest.mock import Mock, patch, MagicMock
 import joblib
 
-from name_classifier.classifier import NameClassifier, classify, classify_list
+from org_vs_person.classifier import NameClassifier, classify, classify_list
 
 
 class TestNameClassifier:
@@ -53,7 +53,7 @@ class TestNameClassifier:
         with pytest.raises(FileNotFoundError, match="Model file not found"):
             classifier.classify("Test Name")
 
-    @patch("name_classifier.classifier.joblib.load")
+    @patch("org_vs_person.classifier.joblib.load")
     @patch("pathlib.Path.exists")
     def test_classify_success(self, mock_exists, mock_load):
         """Test successful classification."""
@@ -77,7 +77,7 @@ class TestNameClassifier:
         mock_vectorizer.transform.assert_called_once_with(["Bob Smith"])
         mock_model.predict.assert_called_once()
 
-    @patch("name_classifier.classifier.joblib.load")
+    @patch("org_vs_person.classifier.joblib.load")
     @patch("pathlib.Path.exists")
     def test_classify_strips_whitespace(self, mock_exists, mock_load):
         """Test that classify strips leading/trailing whitespace."""
@@ -98,7 +98,7 @@ class TestNameClassifier:
         mock_vectorizer.transform.assert_called_once_with(["Microsoft Corporation"])
         assert result == "ORG"
 
-    @patch("name_classifier.classifier.joblib.load")
+    @patch("org_vs_person.classifier.joblib.load")
     @patch("pathlib.Path.exists")
     def test_lazy_loading(self, mock_exists, mock_load):
         """Test that model is loaded lazily on first classify call."""
@@ -151,7 +151,7 @@ class TestNameClassifier:
 class TestClassifyFunction:
     """Tests for the convenience classify() function."""
 
-    @patch("name_classifier.classifier.NameClassifier")
+    @patch("org_vs_person.classifier.NameClassifier")
     def test_classify_function_uses_singleton(self, mock_classifier_class):
         """Test that classify() uses a singleton instance."""
         mock_instance = Mock()
@@ -167,7 +167,7 @@ class TestClassifyFunction:
         # would need to reset the module state between calls, which is complex
         # This test demonstrates the expected behavior
 
-    @patch("name_classifier.classifier.joblib.load")
+    @patch("org_vs_person.classifier.joblib.load")
     @patch("pathlib.Path.exists")
     def test_classify_function_integration(self, mock_exists, mock_load):
         """Test classify function end-to-end."""
@@ -182,7 +182,7 @@ class TestClassifyFunction:
         mock_load.side_effect = [mock_model, mock_vectorizer]
 
         # Reset the singleton before testing
-        import name_classifier.classifier as clf_module
+        import org_vs_person.classifier as clf_module
 
         clf_module._default_classifier = None
 
@@ -234,7 +234,7 @@ class TestClassifyList:
         with pytest.raises(ValueError, match="Name at index 0 cannot be empty"):
             classifier.classify_list(["   ", "Valid Name"])  # Whitespace only
 
-    @patch("name_classifier.classifier.joblib.load")
+    @patch("org_vs_person.classifier.joblib.load")
     @patch("pathlib.Path.exists")
     def test_classify_list_success(self, mock_exists, mock_load):
         """Test successful classification of multiple names."""
@@ -255,7 +255,7 @@ class TestClassifyList:
         mock_vectorizer.transform.assert_called_once_with(["Bob Smith", "Google Inc.", "ministry of defense"])
         mock_model.predict.assert_called_once()
 
-    @patch("name_classifier.classifier.joblib.load")
+    @patch("org_vs_person.classifier.joblib.load")
     @patch("pathlib.Path.exists")
     def test_classify_list_strips_whitespace(self, mock_exists, mock_load):
         """Test that classify_list strips leading/trailing whitespace from all names."""
@@ -276,7 +276,7 @@ class TestClassifyList:
         mock_vectorizer.transform.assert_called_once_with(["Bob Smith", "Google Inc."])
         assert result == ["PER", "ORG"]
 
-    @patch("name_classifier.classifier.joblib.load")
+    @patch("org_vs_person.classifier.joblib.load")
     @patch("pathlib.Path.exists")
     def test_classify_list_single_element(self, mock_exists, mock_load):
         """Test classify_list with a single element."""
@@ -300,7 +300,7 @@ class TestClassifyList:
 class TestClassifyListFunction:
     """Tests for the convenience classify_list() function."""
 
-    @patch("name_classifier.classifier.joblib.load")
+    @patch("org_vs_person.classifier.joblib.load")
     @patch("pathlib.Path.exists")
     def test_classify_list_function_integration(self, mock_exists, mock_load):
         """Test classify_list function end-to-end."""
@@ -315,7 +315,7 @@ class TestClassifyListFunction:
         mock_load.side_effect = [mock_model, mock_vectorizer]
 
         # Reset the singleton before testing
-        import name_classifier.classifier as clf_module
+        import org_vs_person.classifier as clf_module
 
         clf_module._default_classifier = None
 

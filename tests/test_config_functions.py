@@ -4,7 +4,7 @@ from pathlib import Path
 from unittest.mock import patch, mock_open
 import yaml
 
-from name_classifier.config import load_model_config, save_model_config, MODEL_CONFIG_PATH
+from org_vs_person.config import load_model_config, save_model_config, MODEL_CONFIG_PATH
 
 
 class TestLoadModelConfig:

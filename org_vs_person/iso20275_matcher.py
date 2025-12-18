@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Optional, Set
 
-from name_classifier.normalization import normalize, NormalizedText
+from org_vs_person.normalization import normalize, NormalizedText
 
 
 # Ambiguous short forms that frequently collide with personal names (Tier C)

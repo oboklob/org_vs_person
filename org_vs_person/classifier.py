@@ -8,7 +8,7 @@ from typing import Optional, List, Dict, Tuple
 import joblib
 import numpy as np
 
-from name_classifier.config import MODEL_PATH, VECTORIZER_PATH, METADATA_PATH
+from org_vs_person.config import MODEL_PATH, VECTORIZER_PATH, METADATA_PATH
 
 
 @dataclass
@@ -242,7 +242,7 @@ class NameClassifier:
         self._load_model()
         
         # Initialize ISO matcher for diagnostics
-        from name_classifier.iso20275_matcher import ISO20275Matcher
+        from org_vs_person.iso20275_matcher import ISO20275Matcher
         iso_matcher = ISO20275Matcher()
         
         # Check for legal form match

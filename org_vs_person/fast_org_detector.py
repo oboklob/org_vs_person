@@ -12,7 +12,7 @@ Performance on 1M test set:
 from typing import Optional, Literal
 from dataclasses import dataclass
 
-from name_classifier.iso20275_matcher import ISO20275Matcher, SuffixMatch
+from org_vs_person.iso20275_matcher import ISO20275Matcher, SuffixMatch
 
 
 @dataclass

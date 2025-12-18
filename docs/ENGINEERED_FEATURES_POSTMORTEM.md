@@ -5,7 +5,7 @@
 > The engineered features approach described here was **NOT adopted** and is preserved  for reference only.
 > 
 > **Current System**: Uses simple TfidfVectorizer + LogisticRegression (0.91+ accuracy).
-> See main [README.md](file:///sites/name_classifier/README.md) for current approach.
+> See main [README.md](file:///sites/org_vs_person/README.md) for current approach.
 
 **Date**: December 12, 2025  
 **Objective**: Improve name classification accuracy by adding engineered features alongside character n-grams  
@@ -227,12 +227,12 @@ For text classification with character-level patterns:
 ## Code Artifacts Created
 
 ### Production Code (~1,900 lines)
-- `name_classifier/normalization.py` (86 lines)
-- `name_classifier/iso20275_matcher.py` (232 lines)
-- `name_classifier/feature_engineering.py` (292 lines)
-- `name_classifier/transformers.py` (119 lines)
-- `name_classifier/feature_dropout.py` (89 lines)
-- `name_classifier/classifier.py` (+165 lines for diagnostics)
+- `org_vs_person/normalization.py` (86 lines)
+- `org_vs_person/iso20275_matcher.py` (232 lines)
+- `org_vs_person/feature_engineering.py` (292 lines)
+- `org_vs_person/transformers.py` (119 lines)
+- `org_vs_person/feature_dropout.py` (89 lines)
+- `org_vs_person/classifier.py` (+165 lines for diagnostics)
 - `scripts/train_model_enhanced.py` (570 lines)
 
 ### Test Code (~750 lines)
@@ -365,7 +365,7 @@ python scripts/analyze_features.py
 
 # Test diagnostics
 python -c "
-from name_classifier import NameClassifier
+from org_vs_person import NameClassifier
 c = NameClassifier()
 result = c.classify_with_diagnostics('Acme Corp Ltd')
 print(result)

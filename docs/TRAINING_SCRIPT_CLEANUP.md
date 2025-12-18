@@ -118,15 +118,15 @@ python scripts/train_model.py --data-dir data --fast-train
 | File | Status | Notes |
 |------|--------|-------|
 | `scripts/train_model.py` | ✅ **UPDATED** | Removed RF, added hash vectorizers |
-| `name_classifier/fast_org_detector.py` | ✅ **KEPT** | 99.58% precision org detection |
-| `name_classifier/iso20275_matcher.py` | ✅ **KEPT** | Used by fast detector |
-| `name_classifier/normalization.py` | ✅ **KEPT** | Utility functions |
+| `org_vs_person/fast_org_detector.py` | ✅ **KEPT** | 99.58% precision org detection |
+| `org_vs_person/iso20275_matcher.py` | ✅ **KEPT** | Used by fast detector |
+| `org_vs_person/normalization.py` | ✅ **KEPT** | Utility functions |
 | `docs/ENGINEERED_FEATURES_POSTMORTEM.md` | ✅ **KEPT** | Documents failed experiment |
 | `docs/FAST_ORG_DETECTION.md` | ✅ **KEPT** | Fast detector docs |
 | `scripts/train_model_enhanced.py` | 📦 **ARCHIVE** | Failed experiment |
-| `name_classifier/feature_engineering.py` | 📦 **ARCHIVE** | Failed experiment |
-| `name_classifier/transformers.py` | 📦 **ARCHIVE** | Failed experiment |
-| `name_classifier/feature_dropout.py` | 📦 **ARCHIVE** | Failed experiment |
+| `org_vs_person/feature_engineering.py` | 📦 **ARCHIVE** | Failed experiment |
+| `org_vs_person/transformers.py` | 📦 **ARCHIVE** | Failed experiment |
+| `org_vs_person/feature_dropout.py` | 📦 **ARCHIVE** | Failed experiment |
 
 ## Verification
 

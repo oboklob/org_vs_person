@@ -5,10 +5,10 @@ with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 setup(
-    name="name-classifier",
+    name="org-vs-person",
     version="0.1.0",
     author="Stuart",
-    description="A machine learning-based name type classifier for distinguishing between organizations and individuals",
+    description="A machine learning-based classifier for distinguishing between organization and person names",
     long_description=long_description,
     long_description_content_type="text/markdown",
     packages=find_packages(exclude=["tests", "tests.*", "scripts"]),
@@ -29,7 +29,7 @@ setup(
         ],
     },
     package_data={
-        "name_classifier": ["models/*.pkl", "models/*.json"],
+        "org_vs_person": ["models/*.pkl", "models/*.json"],
     },
     include_package_data=True,
     classifiers=[

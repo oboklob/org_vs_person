@@ -19,7 +19,7 @@ Without handling class imbalance, machine learning models tend to:
 
 ### 1. ✅ Stratified Sampling (Already Implemented)
 
-[prepare_data.py](file:///sites/name_classifier/scripts/prepare_data.py) uses stratified train/test split:
+[prepare_data.py](file:///sites/org_vs_person/scripts/prepare_data.py) uses stratified train/test split:
 
 ```python
 train_df, test_df = train_test_split(
@@ -35,7 +35,7 @@ This ensures both train and test sets have the same 6:1 ratio.
 
 **Most Important Fix!**
 
-Updated [train_model.py](file:///sites/name_classifier/scripts/train_model.py) to use `class_weight='balanced'`:
+Updated [train_model.py](file:///sites/org_vs_person/scripts/train_model.py) to use `class_weight='balanced'`:
 
 ```python
 "LogisticRegression": LogisticRegression(

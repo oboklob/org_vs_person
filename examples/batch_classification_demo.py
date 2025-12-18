@@ -6,7 +6,7 @@ This script shows how to use the classify_list function to classify
 multiple names efficiently in a single call.
 """
 
-from name_classifier import classify, classify_list
+from org_vs_person import classify, classify_list
 
 
 def main():

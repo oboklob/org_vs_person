@@ -7,7 +7,7 @@ Conducted a comprehensive benchmark to assess whether the ISO20275 legal form fa
 ## Benchmark Results
 
 ### Test Configuration
-- **Dataset**: Test set from `/sites/name_classifier/data/test.csv` (2M samples)
+- **Dataset**: Test set from `/sites/org_vs_person/data/test.csv` (2M samples)
 - **Sample sizes**: 100, 500, 2000, 5000, 20000, 50000
 - **Runs per size**: 3 (averaged)
 - **Tier filter**: All tiers (A, B, C) - ~27% coverage

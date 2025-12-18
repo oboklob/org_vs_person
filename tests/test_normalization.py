@@ -1,6 +1,6 @@
 """Unit tests for normalization module."""
 import pytest
-from name_classifier.normalization import normalize, strip_diacritics, NormalizedText
+from org_vs_person.normalization import normalize, strip_diacritics, NormalizedText
 
 
 class TestStripDiacritics:

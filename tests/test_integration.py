@@ -3,8 +3,8 @@ import pytest
 import pandas as pd
 from pathlib import Path
 
-from name_classifier import NameClassifier
-from name_classifier.config import MODEL_PATH, VECTORIZER_PATH
+from org_vs_person import NameClassifier
+from org_vs_person.config import MODEL_PATH, VECTORIZER_PATH
 
 
 # Skip these tests if model is not trained yet

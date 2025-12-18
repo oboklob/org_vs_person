@@ -1,7 +1,7 @@
 """Unit tests for ISO 20275 matcher module."""
 import pytest
 from pathlib import Path
-from name_classifier.iso20275_matcher import (
+from org_vs_person.iso20275_matcher import (
     ISO20275Matcher,
     SuffixMatch,
     FormMetadata,

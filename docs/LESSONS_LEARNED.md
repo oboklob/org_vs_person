@@ -4,7 +4,7 @@
 > **HISTORICAL LESSONS** - This documents key takeaways from a failed experiment (December 2025).
 > These lessons inform our **current** simple approach but the engineered features system itself is archived.
 > 
-> **Current System**: Simple n-gram classifier. See [README.md](file:///sites/name_classifier/README.md) for usage.
+> **Current System**: Simple n-gram classifier. See [README.md](file:///sites/org_vs_person/README.md) for usage.
 
 ## TL;DR
 

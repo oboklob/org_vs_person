@@ -4,14 +4,14 @@ from unittest.mock import Mock, patch, MagicMock
 from pathlib import Path
 import numpy as np
 
-from name_classifier.classifier import NameClassifier, ClassificationResult
+from org_vs_person.classifier import NameClassifier, ClassificationResult
 
 
 class TestMissingCoverageClassifier:
     """Tests for uncovered lines in classifier.py"""
 
     @patch("builtins.open", create=True)
-    @patch("name_classifier.classifier.joblib.load")
+    @patch("org_vs_person.classifier.joblib.load")
     @patch("pathlib.Path.exists")
     def test_metadata_loading_exception_handling(self, mock_exists, mock_load, mock_open):
         """Test lines 69-71: Metadata loading exception handling."""
@@ -50,8 +50,8 @@ class TestMissingCoverageClassifier:
         with pytest.raises(ValueError, match="Name cannot be empty"):
             classifier.classify_with_diagnostics("   ")
 
-    @patch("name_classifier.iso20275_matcher.ISO20275Matcher")
-    @patch("name_classifier.classifier.joblib.load")
+    @patch("org_vs_person.iso20275_matcher.ISO20275Matcher")
+    @patch("org_vs_person.classifier.joblib.load")
     @patch("pathlib.Path.exists")
     def test_tier_a_shortcut(self, mock_exists, mock_load, mock_iso_class):
         """Test line 253: Tier A shortcut in classify_with_diagnostics."""
@@ -85,8 +85,8 @@ class TestMissingCoverageClassifier:
         # Model should not have been called
         mock_model.predict.assert_not_called()
 
-    @patch("name_classifier.iso20275_matcher.ISO20275Matcher")
-    @patch("name_classifier.classifier.joblib.load")
+    @patch("org_vs_person.iso20275_matcher.ISO20275Matcher")
+    @patch("org_vs_person.classifier.joblib.load")
     @patch("pathlib.Path.exists")
     def test_model_without_predict_proba(self, mock_exists, mock_load, mock_iso_class):
         """Test line 278: Probability fallback for models without predict_proba."""

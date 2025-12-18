@@ -14,9 +14,9 @@ from pathlib import Path
 from typing import List, Tuple, Dict
 from collections import defaultdict
 
-from name_classifier.classifier import NameClassifier
-from name_classifier.fast_org_detector import FastOrgDetector
-from name_classifier.config import DATA_DIR
+from org_vs_person.classifier import NameClassifier
+from org_vs_person.fast_org_detector import FastOrgDetector
+from org_vs_person.config import DATA_DIR
 
 
 def load_test_data(limit: int = None) -> pd.DataFrame:

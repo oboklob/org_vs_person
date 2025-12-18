@@ -4,7 +4,7 @@ from unittest.mock import Mock, patch
 from pathlib import Path
 import numpy as np
 
-from name_classifier.classifier import (
+from org_vs_person.classifier import (
     NameClassifier,
     ClassificationResult,
     classify_with_confidence,
@@ -16,7 +16,7 @@ from name_classifier.classifier import (
 class TestClassifyWithConfidence:
     """Tests for classify_with_confidence method."""
 
-    @patch("name_classifier.classifier.joblib.load")
+    @patch("org_vs_person.classifier.joblib.load")
     @patch("pathlib.Path.exists")
     def test_high_confidence_person(self, mock_exists, mock_load):
         """Test high confidence classification for person."""
@@ -41,7 +41,7 @@ class TestClassifyWithConfidence:
         # Confidence should be abs(0.05 - 0.5) * 2 = 0.9
         assert abs(confidence - 0.9) < 0.01
 
-    @patch("name_classifier.classifier.joblib.load")
+    @patch("org_vs_person.classifier.joblib.load")
     @patch("pathlib.Path.exists")
     def test_high_confidence_organization(self, mock_exists, mock_load):
         """Test high confidence classification for organization."""
@@ -66,7 +66,7 @@ class TestClassifyWithConfidence:
         # Confidence should be abs(0.95 - 0.5) * 2 = 0.9
         assert abs(confidence - 0.9) < 0.01
 
-    @patch("name_classifier.classifier.joblib.load")
+    @patch("org_vs_person.classifier.joblib.load")
     @patch("pathlib.Path.exists")
     def test_uncertain_classification(self, mock_exists, mock_load):
         """Test uncertain classification when probability is near 0.5."""
@@ -90,7 +90,7 @@ class TestClassifyWithConfidence:
         # Confidence should be abs(0.55 - 0.5) * 2 = 0.1
         assert abs(confidence - 0.1) < 0.01
 
-    @patch("name_classifier.classifier.joblib.load")
+    @patch("org_vs_person.classifier.joblib.load")
     @patch("pathlib.Path.exists")
     def test_custom_confidence_threshold(self, mock_exists, mock_load):
         """Test custom confidence threshold."""
@@ -134,8 +134,8 @@ class TestClassifyWithConfidence:
 class TestClassifyListWithConfidence:
     """Tests for classify_list_with_confidence method."""
 
-    @patch("name_classifier.iso20275_matcher.ISO20275Matcher")
-    @patch("name_classifier.classifier.joblib.load")
+    @patch("org_vs_person.iso20275_matcher.ISO20275Matcher")
+    @patch("org_vs_person.classifier.joblib.load")
     @patch("pathlib.Path.exists")
     def test_batch_classification(self, mock_exists, mock_load, mock_iso_class):
         """Test batch classification with mixed confidence levels."""
@@ -191,8 +191,8 @@ class TestClassifyListWithConfidence:
 class TestFilterByConfidence:
     """Tests for filter_by_confidence method."""
 
-    @patch("name_classifier.iso20275_matcher.ISO20275Matcher")
-    @patch("name_classifier.classifier.joblib.load")
+    @patch("org_vs_person.iso20275_matcher.ISO20275Matcher")
+    @patch("org_vs_person.classifier.joblib.load")
     @patch("pathlib.Path.exists")
     def test_filter_persons(self, mock_exists, mock_load, mock_iso_class):
         """Test filtering to get only confident persons."""
@@ -234,8 +234,8 @@ class TestFilterByConfidence:
         assert results[0][0] == "Bob Smith"
         assert results[0][1] > 0.7
 
-    @patch("name_classifier.iso20275_matcher.ISO20275Matcher")
-    @patch("name_classifier.classifier.joblib.load")
+    @patch("org_vs_person.iso20275_matcher.ISO20275Matcher")
+    @patch("org_vs_person.classifier.joblib.load")
     @patch("pathlib.Path.exists")
     def test_filter_organizations(self, mock_exists, mock_load, mock_iso_class):
         """Test filtering to get only confident organizations."""
@@ -276,7 +276,7 @@ class TestFilterByConfidence:
         assert results[0][0] == "Microsoft Corp"
         assert results[1][0] == "Apple Inc"
 
-    @patch("name_classifier.classifier.joblib.load")
+    @patch("org_vs_person.classifier.joblib.load")
     @patch("pathlib.Path.exists")
     def test_filter_empty_result(self, mock_exists, mock_load):
         """Test filtering that returns no results."""
@@ -320,7 +320,7 @@ class TestFilterByConfidence:
 class TestConvenienceFunctions:
     """Tests for module-level convenience functions."""
 
-    @patch("name_classifier.classifier.joblib.load")
+    @patch("org_vs_person.classifier.joblib.load")
     @patch("pathlib.Path.exists")
     def test_classify_with_confidence_function(self, mock_exists, mock_load):
         """Test classify_with_confidence convenience function."""
@@ -337,15 +337,15 @@ class TestConvenienceFunctions:
         mock_load.side_effect = [mock_model, mock_vectorizer]
 
         # Reset singleton
-        import name_classifier.classifier as clf_module
+        import org_vs_person.classifier as clf_module
         clf_module._default_classifier = None
 
         label, confidence = classify_with_confidence("Bob Smith", min_confidence=0.7)
         assert label == "PER"
         assert confidence > 0.7
 
-    @patch("name_classifier.iso20275_matcher.ISO20275Matcher")
-    @patch("name_classifier.classifier.joblib.load")
+    @patch("org_vs_person.iso20275_matcher.ISO20275Matcher")
+    @patch("org_vs_person.classifier.joblib.load")
     @patch("pathlib.Path.exists")
     def test_classify_list_with_confidence_function(self, mock_exists, mock_load, mock_iso_class):
         """Test classify_list_with_confidence convenience function."""
@@ -374,7 +374,7 @@ class TestConvenienceFunctions:
         mock_load.side_effect = [mock_model, mock_vectorizer]
 
         # Reset singleton
-        import name_classifier.classifier as clf_module
+        import org_vs_person.classifier as clf_module
         clf_module._default_classifier = None
 
         results = classify_list_with_confidence(["Bob Smith", "Microsoft Corp"])
@@ -382,8 +382,8 @@ class TestConvenienceFunctions:
         assert results[0][0] == "PER"
         assert results[1][0] == "ORG"
 
-    @patch("name_classifier.iso20275_matcher.ISO20275Matcher")
-    @patch("name_classifier.classifier.joblib.load")
+    @patch("org_vs_person.iso20275_matcher.ISO20275Matcher")
+    @patch("org_vs_person.classifier.joblib.load")
     @patch("pathlib.Path.exists")
     def test_filter_by_confidence_function(self, mock_exists, mock_load, mock_iso_class):
         """Test filter_by_confidence convenience function."""
@@ -412,7 +412,7 @@ class TestConvenienceFunctions:
         mock_load.side_effect = [mock_model, mock_vectorizer]
 
         # Reset singleton
-        import name_classifier.classifier as clf_module
+        import org_vs_person.classifier as clf_module
         clf_module._default_classifier = None
 
         results = filter_by_confidence(["Bob Smith", "Microsoft Corp"], "PER", min_confidence=0.7)

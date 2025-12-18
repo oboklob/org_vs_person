@@ -36,14 +36,14 @@ Moved to `archive/failed_feature_engineering/`:
 ### Files Kept (Production)
 
 **Core Modules**:
-- ✅ `name_classifier/fast_org_detector.py` - 99.58% precision org detection
-- ✅ `name_classifier/iso20275_matcher.py` - ISO 20275 legal form matching
-- ✅ `name_classifier/normalization.py` - Text normalization utilities
-- ✅ `name_classifier/classifier.py` - Main classifier (unchanged)
+- ✅ `org_vs_person/fast_org_detector.py` - 99.58% precision org detection
+- ✅ `org_vs_person/iso20275_matcher.py` - ISO 20275 legal form matching
+- ✅ `org_vs_person/normalization.py` - Text normalization utilities
+- ✅ `org_vs_person/classifier.py` - Main classifier (unchanged)
 
 **Updated Files**:
 - ✅ `scripts/train_model.py` - Removed RandomForest, added HashingVectorizer
-- ✅ `name_classifier/__init__.py` - Removed feature_engineering imports
+- ✅ `org_vs_person/__init__.py` - Removed feature_engineering imports
 - ✅ `tests/test_integration.py` - Updated to use NameClassifier methods
 
 **Tests (Passing)**:
@@ -102,7 +102,7 @@ The project is now clean and ready for:
 
 2. **Using fast org detection**:
    ```python
-   from name_classifier import is_org_by_legal_form
+   from org_vs_person import is_org_by_legal_form
    
    if is_org_by_legal_form("Acme Ltd", conservative=False):
        print("High-confidence ORG!")
@@ -110,7 +110,7 @@ The project is now clean and ready for:
 
 3. **Normal classification**:
    ```python
-   from name_classifier import NameClassifier
+   from org_vs_person import NameClassifier
    
    classifier = NameClassifier()
    result = classifier.classify("John Smith")

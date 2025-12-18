@@ -17,7 +17,7 @@ The `FastOrgDetector` provides **99%+ precision** organization detection using l
 ### Simple Detection
 
 ```python
-from name_classifier import is_org_by_legal_form
+from org_vs_person import is_org_by_legal_form
 
 # Quick check with conservative settings (99.97% precision)
 if is_org_by_legal_form("Acme Corporation Ltd"):
@@ -31,7 +31,7 @@ if is_org_by_legal_form("Acme Corp SA", conservative=False):
 ### Batch Filtering
 
 ```python
-from name_classifier import quick_org_filter
+from org_vs_person import quick_org_filter
 
 names = [
     "Acme Corporation Ltd",
@@ -52,7 +52,7 @@ print(f"{len(needs_ml)} names need ML classifier")
 ### Full API
 
 ```python
-from name_classifier import FastOrgDetector
+from org_vs_person import FastOrgDetector
 
 # Initialize with tier filter
 detector = FastOrgDetector(tier_filter=['A', 'B'])  # Recommended
@@ -105,7 +105,7 @@ detector = FastOrgDetector(tier_filter=None)  # or ['A', 'B', 'C']
 ### Integration with ML Classifier
 
 ```python
-from name_classifier import FastOrgDetector, NameClassifier
+from org_vs_person import FastOrgDetector, NameClassifier
 
 # Initialize both
 fast_detector = FastOrgDetector(tier_filter=['A', 'B'])
@@ -238,4 +238,4 @@ This will show precision/recall/coverage for all tier configurations on your tes
 
 - [ISO 20275 Standard](https://www.iso.org/standard/67420.html)
 - [Legal Entity Forms Data](../data/iso20275/)
-- [`ISO20275Matcher` Documentation](../name_classifier/iso20275_matcher.py)
+- [`ISO20275Matcher` Documentation](../org_vs_person/iso20275_matcher.py)

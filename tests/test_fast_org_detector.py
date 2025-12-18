@@ -1,6 +1,6 @@
 """Tests for fast organization detector."""
 import pytest
-from name_classifier.fast_org_detector import (
+from org_vs_person.fast_org_detector import (
     FastOrgDetector,
     OrgDetectionResult,
     is_org_by_legal_form,

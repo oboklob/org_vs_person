@@ -1,5 +1,5 @@
 """Name classifier package for distinguishing between person and organization names."""
-from name_classifier.classifier import (
+from org_vs_person.classifier import (
     NameClassifier,
     ClassificationResult,
     classify,
@@ -8,9 +8,9 @@ from name_classifier.classifier import (
     classify_list_with_confidence,
     filter_by_confidence,
 )
-from name_classifier.normalization import normalize, NormalizedText
-from name_classifier.iso20275_matcher import ISO20275Matcher, SuffixMatch, FormMetadata
-from name_classifier.fast_org_detector import (
+from org_vs_person.normalization import normalize, NormalizedText
+from org_vs_person.iso20275_matcher import ISO20275Matcher, SuffixMatch, FormMetadata
+from org_vs_person.fast_org_detector import (
     FastOrgDetector,
     OrgDetectionResult,
     is_org_by_legal_form,

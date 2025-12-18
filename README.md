@@ -1,4 +1,4 @@
-# Name Classifier
+# Org vs Person Classifier
 
 A machine learning-based Python package for classifying names as either **organizations (ORG)** or **individuals (PER)**.
 
@@ -13,7 +13,7 @@ pip install -e .
 ## Quick Start
 
 ```python
-from name_classifier import classify, classify_list
+from org_vs_person import classify, classify_list
 
 # Classify individual names
 result = classify("Bob Smith")
@@ -33,7 +33,7 @@ print(results)  # Output: ['PER', 'ORG', 'ORG']
 For cases where you need to know **how confident** the model is, or want to handle uncertain classifications explicitly:
 
 ```python
-from name_classifier import classify_with_confidence, filter_by_confidence
+from org_vs_person import classify_with_confidence, filter_by_confidence
 
 # Get classification with confidence score
 label, confidence = classify_with_confidence("Bob Smith", min_confidence=0.8)
@@ -77,7 +77,7 @@ The classifier offers different methods optimized for different use cases. Choos
 For most use cases, the standard methods provide excellent performance:
 
 ```python
-from name_classifier import classify, classify_list
+from org_vs_person import classify, classify_list
 
 # Single classification: ~57k names/sec, 96.34% precision
 result = classify("Microsoft Corporation")
@@ -97,7 +97,7 @@ results = classify_list(["Bob Smith", "Google Inc", "Jane Doe"])
 When you need to **explain why** something was classified as ORG:
 
 ```python
-from name_classifier import NameClassifier
+from org_vs_person import NameClassifier
 
 classifier = NameClassifier()
 
@@ -123,7 +123,7 @@ if result.reason_codes['matched_legal_form']:
 For workflows where **false positives are costly**:
 
 ```python
-from name_classifier import NameClassifier
+from org_vs_person import NameClassifier
 
 classifier = NameClassifier()
 
@@ -152,8 +152,8 @@ else:
 Combine high precision for obvious cases with comprehensive coverage:
 
 ```python
-from name_classifier import NameClassifier
-from name_classifier.fast_org_detector import FastOrgDetector
+from org_vs_person import NameClassifier
+from org_vs_person.fast_org_detector import FastOrgDetector
 
 classifier = NameClassifier()
 detector = FastOrgDetector(tier_filter=['A', 'B'])  # 99.59% precision
@@ -202,7 +202,7 @@ See `docs/FILTER_PERFORMANCE_ANALYSIS.md` and `docs/FILTER_ACCURACY_ANALYSIS.md`
 ## Advanced API Usage
 
 ```python
-from name_classifier import NameClassifier
+from org_vs_person import NameClassifier
 
 # Create classifier instance
 classifier = NameClassifier()

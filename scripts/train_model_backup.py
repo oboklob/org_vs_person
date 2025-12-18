@@ -28,10 +28,10 @@ from sklearn.svm import LinearSVC
 from sklearn.model_selection import cross_val_score
 from sklearn.metrics import accuracy_score, f1_score, classification_report
 
-# Add path to import from name_classifier package
+# Add path to import from org_vs_person package
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent))
-from name_classifier.config import load_model_config, save_model_config
+from org_vs_person.config import load_model_config, save_model_config
 
 
 def create_vectorizer_from_config(config: dict):
@@ -801,7 +801,7 @@ def main():
     print("\nNext steps:")
     print("  1. Run tests: pytest")
     print("  2. Try the classifier:")
-    print('     python -c "from name_classifier import classify; print(classify(\'Bob Smith\'))"')
+    print('     python -c "from org_vs_person import classify; print(classify(\'Bob Smith\'))"')
 
 
 if __name__ == "__main__":
