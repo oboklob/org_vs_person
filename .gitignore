@@ -47,7 +47,6 @@ data/
 !tests/fixtures/*.csv
 
 # Model files (large)
-*.pkl
 !org_vs_person/models/.gitkeep
 *.h5
 *.joblib
