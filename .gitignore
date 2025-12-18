@@ -48,7 +48,7 @@ data/
 
 # Model files (large)
 *.pkl
-!name_classifier/models/.gitkeep
+!org_vs_person/models/.gitkeep
 *.h5
 *.joblib
 *.gz

@@ -333,7 +333,7 @@ Each source supports:
 pytest
 
 # Run with coverage
-pytest --cov=name_classifier --cov-report=html
+pytest --cov=org_vs_person --cov-report=html
 
 # Run specific test file
 pytest tests/test_classifier.py -v

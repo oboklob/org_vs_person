@@ -1,4 +1,4 @@
-"""Setup script for name_classifier package."""
+"""Setup script for org_vs_person package."""
 from setuptools import setup, find_packages
 
 with open("README.md", "r", encoding="utf-8") as fh:
