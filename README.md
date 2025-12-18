@@ -350,8 +350,12 @@ The best performing model is automatically selected based on cross-validation re
 
 ## License
 
-MIT License
+GNU General Public License v3.0
 
-## Data Source
+## Data Sources & Attribution
 
-This package uses the [paranames dataset](https://github.com/ooglyBoogly/para-names), which aggregates named entity data from Wikidata.
+This project uses data from the following sources:
+
+*   **Wikidata**: [Paranames dataset](https://github.com/ooglyBoogly/para-names), licensed under [CC0 1.0 Universal (Public Domain Dedication)](https://creativecommons.org/publicdomain/zero/1.0/).
+*   **Global Legal Entity Identifier Foundation (GLEIF)**: LEI data licensed under [CC0 1.0 Universal (Public Domain Dedication)](https://creativecommons.org/publicdomain/zero/1.0/).
+*   **Companies House**: Contains public sector information licensed under the [Open Government Licence v3.0](https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/).
