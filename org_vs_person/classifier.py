@@ -7,6 +7,7 @@ from typing import Optional, List, Dict, Tuple
 
 import joblib
 import numpy as np
+import sklearn
 
 from org_vs_person.config import MODEL_PATH, VECTORIZER_PATH, METADATA_PATH
 
@@ -66,6 +67,24 @@ class NameClassifier:
                 if METADATA_PATH.exists():
                     with open(METADATA_PATH, "r") as f:
                         self._metadata = json.load(f)
+                    
+                    # Check for sklearn version mismatch
+                    if self._metadata and "sklearn_version" in self._metadata:
+                        train_version = self._metadata["sklearn_version"]
+                        current_version = sklearn.__version__
+                        
+                        # Check if major.minor versions differ
+                        train_major_minor = ".".join(train_version.split(".")[:2])
+                        current_major_minor = ".".join(current_version.split(".")[:2])
+                        
+                        if train_major_minor != current_major_minor:
+                            warnings.warn(
+                                f"Model was trained with scikit-learn {train_version}, "
+                                f"but you are running {current_version}. "
+                                "This may cause instability or errors. "
+                                "It is recommended to use the same major.minor version.",
+                                UserWarning
+                            )
             except (FileNotFoundError, IOError):
                 # Metadata is optional
                 pass

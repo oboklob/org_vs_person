@@ -14,7 +14,7 @@ setup(
     packages=find_packages(exclude=["tests", "tests.*", "scripts"]),
     python_requires=">=3.8",
     install_requires=[
-        "scikit-learn>=1.0.0",
+        "scikit-learn>=1.3.0",
         "pandas>=1.3.0",
         "joblib>=1.0.0",
         "numpy>=1.20.0",

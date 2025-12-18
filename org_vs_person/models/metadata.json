@@ -13,5 +13,6 @@
   "grid_mode": "fast_train",
   "fixed_vectorizer": null,
   "fixed_model": null,
-  "excluded_models": null
+  "excluded_models": null,
+  "sklearn_version": "1.8.0"
 }

@@ -20,6 +20,7 @@ from pathlib import Path
 import joblib
 import numpy as np
 import pandas as pd
+import sklearn
 from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer, HashingVectorizer
 from sklearn.linear_model import LogisticRegression
 from sklearn.naive_bayes import MultinomialNB
@@ -848,6 +849,7 @@ def main():
         "fixed_vectorizer": args.fix_vectorizer,
         "fixed_model": args.fix_model,
         "excluded_models": excluded_models if excluded_models else None,
+        "sklearn_version": sklearn.__version__,
     }
     
     # Add best parameters if in parameter grid mode
