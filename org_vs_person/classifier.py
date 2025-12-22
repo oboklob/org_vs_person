@@ -88,8 +88,54 @@ class NameClassifier:
             except (FileNotFoundError, IOError):
                 # Metadata is optional
                 pass
+                # Metadata is optional
+                pass
 
-    def classify(self, name: str) -> str:
+    def _get_org_probability(self, X) -> np.ndarray:
+        """
+        Calculate probability of ORG class, using approximation if needed.
+        
+        Args:
+            X: Vectorized input
+            
+        Returns:
+            Array of probabilities (floats 0.0-1.0) indicating likelihood of ORG class
+        """
+        if hasattr(self._model, 'predict_proba'):
+            probas = self._model.predict_proba(X)
+            classes = self._model.classes_
+            
+            # Find ORG index
+            if 'ORG' in classes:
+                org_idx = np.where(classes == 'ORG')[0][0]
+            else:
+                # Fallback, assume index 1 is ORG (standard for binary)
+                org_idx = 1
+                
+            return probas[:, org_idx]
+            
+        elif hasattr(self._model, 'decision_function'):
+            # Use decision function with sigmoid approximation
+            # This handles LinearSVC and other models without predict_proba
+            decision = self._model.decision_function(X)
+            
+            # Sigmoid function: 1 / (1 + e^-x)
+            p_org = 1 / (1 + np.exp(-decision))
+            
+            # Check if ORG is the positive class (index 1)
+            classes = self._model.classes_
+            if len(classes) > 1 and classes[1] != 'ORG':
+                # If ORG is at index 0, then decision function (for index 1) 
+                # is inversely related to ORG
+                p_org = 1 - p_org
+                
+            return p_org
+            
+        else:
+            # Fallback to binary prediction 0.0 or 1.0
+            preds = self._model.predict(X)
+            return np.array([1.0 if p == 'ORG' else 0.0 for p in preds])
+
         """
         Classify a name as either PER (person) or ORG (organization).
         
@@ -206,38 +252,21 @@ class NameClassifier:
             return list(predictions)
             
         # If min_confidence is provided, we need probabilities
-        if hasattr(self._model, 'predict_proba'):
-            probas = self._model.predict_proba(X)
+        p_orgs = self._get_org_probability(X)
+        
+        results = []
+        for p_org in p_orgs:
+            p_org = float(p_org)
+            confidence = abs(p_org - 0.5) * 2
             
-            # Get class indices
-            classes = self._model.classes_
-            org_idx = np.where(classes == 'ORG')[0][0] if 'ORG' in classes else 1
-            
-            results = []
-            for proba in probas:
-                p_org = float(proba[org_idx])
-                confidence = abs(p_org - 0.5) * 2
-                
-                if confidence < min_confidence:
-                    results.append("UNK")
-                else:
-                    # Use the label with higher probability
-                    # Note: predict() might use a different threshold than 0.5, but usually it's 0.5
-                    # For consistency with confidence calculation, we use 0.5 threshold here
-                    label = "ORG" if p_org >= 0.5 else "PER"
-                    results.append(label)
-            
-            return results
-        else:
-            # Model doesn't support probabilities, fall back to binary prediction
-            # but warn or handle gracefully? 
-            # For now, just return predictions as we can't calculate confidence
-            # Or treat confidence as 1.0?
-            # Let's assume 1.0 confidence for models without probability
-            predictions = self._model.predict(X)
-            if hasattr(predictions, 'tolist'):
-                return predictions.tolist()
-            return list(predictions)
+            if confidence < min_confidence:
+                results.append("UNK")
+            else:
+                # Use the label based on probability (0.5 threshold)
+                label = "ORG" if p_org >= 0.5 else "PER"
+                results.append(label)
+        
+        return results
 
     def get_metadata(self) -> Optional[dict]:
         """
@@ -323,21 +352,12 @@ class NameClassifier:
                 }
             )
         
-        # Get prediction and probability
+        # Get prediction
         X = self._vectorizer.transform([name])
         prediction = self._model.predict(X)[0]
         
-        # Get probability if model supports it
-        if hasattr(self._model, 'predict_proba'):
-            proba = self._model.predict_proba(X)[0]
-            # Assuming ORG is index 1, PER is index 0 (or vice versa)
-            # Need to check which class is which
-            classes = self._model.classes_
-            org_idx = np.where(classes == 'ORG')[0][0] if 'ORG' in classes else 1
-            p_org = float(proba[org_idx])
-        else:
-            # Model doesn't support probabilities, use binary
-            p_org = 1.0 if prediction == 'ORG' else 0.0
+        # Get probability (using approximation if needed)
+        p_org = float(self._get_org_probability(X)[0])
         
         # Build reason codes
         reason_codes = {
