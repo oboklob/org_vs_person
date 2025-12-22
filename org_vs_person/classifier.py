@@ -88,8 +88,6 @@ class NameClassifier:
             except (FileNotFoundError, IOError):
                 # Metadata is optional
                 pass
-                # Metadata is optional
-                pass
 
     def _get_org_probability(self, X) -> np.ndarray:
         """
@@ -136,6 +134,7 @@ class NameClassifier:
             preds = self._model.predict(X)
             return np.array([1.0 if p == 'ORG' else 0.0 for p in preds])
 
+    def classify(self, name: str) -> str:
         """
         Classify a name as either PER (person) or ORG (organization).
         
